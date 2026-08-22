@@ -1,0 +1,23 @@
+C4Component
+    title Project Management Web - Frontend Component to Controller Mapping（設計草稿）
+
+    Container_Boundary(webBoundary, "前端網站（Vue 3 SPA）") {
+        Component(authViews, "帳號與驗證畫面", "Vue Views", "SignIn、SignUp、EmailVerification、ResendVerification")
+        Component(userViews, "使用者管理畫面", "Vue Views", "UserList、UserSetting")
+        Component(projectViews, "專案管理畫面", "Vue Views", "ProjectList、ProjectDetail")
+        Component(taskViews, "Task 與留言畫面", "Vue Views", "TaskItemList、TaskItemDetail、TaskItemForm、BatchStatusDialog")
+    }
+
+    Container_Boundary(apiBoundary, "後端 API（ASP.NET Core Web API）") {
+        Component(authController, "AuthController", "Controller", "帳號、Session、Token 與 Email 驗證")
+        Component(userControllers, "UsersController / UserPreferencesController", "Controllers", "使用者、系統角色與個人偏好")
+        Component(projectControllers, "ProjectsController / ProjectMembersController", "Controllers", "專案、Owner、成員與專案角色")
+        Component(taskControllers, "TaskItemsController / CommentsController", "Controllers", "Task、批次狀態、軟刪除與留言")
+    }
+
+    Rel(authViews, authController, "註冊、登入、驗證與登出 API", "JSON/HTTPS")
+    Rel(userViews, userControllers, "使用者查詢、角色與偏好 API", "JSON/HTTPS")
+    Rel(projectViews, projectControllers, "專案與成員管理 API", "JSON/HTTPS")
+    Rel(taskViews, taskControllers, "Task、批次狀態與留言 API", "JSON/HTTPS")
+
+    UpdateLayoutConfig($c4ShapeInRow="2", $c4BoundaryInRow="2")

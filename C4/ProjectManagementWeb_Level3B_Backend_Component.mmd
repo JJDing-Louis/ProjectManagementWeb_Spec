@@ -1,0 +1,43 @@
+C4Component
+    title Project Management Web - Backend API Component Diagram（設計草稿）
+
+    Container_Boundary(apiBoundary, "後端 API（ASP.NET Core Web API）") {
+
+        Boundary(controllerLayer, "Controller Layer", "Presentation") {
+            Component(authController, "Account Controller", "ASP.NET Core Controller", "處理註冊、登入、登出、Token 更新、Email 驗證與重新寄送")
+            Component(userControllers, "User Controllers", "ASP.NET Core Controller", "UsersController、UserPreferencesController")
+            Component(projectControllers, "Project Controllers", "ASP.NET Core Controller", "ProjectsController、ProjectMembersController")
+            Component(taskControllers, "Task Controllers", "ASP.NET Core Controller", "TaskItemsController、CommentsController")
+        }
+
+        Boundary(applicationLayer, "Application / Service Layer", "Application") {
+            Component(identityService, "Identity 與 User Service", "C#", "執行帳號、Session、Token、角色、Email 驗證與偏好規則")
+            Component(projectService, "Project Service", "C#", "執行專案、Owner、成員、角色與版本衝突規則")
+            Component(taskService, "Task 與 Comment Service", "C#", "執行狀態轉換、指派、批次交易、軟刪除與留言規則")
+        }
+
+        Boundary(infrastructureLayer, "Infrastructure Layer", "Infrastructure") {
+            Component(persistence, "資料存取與交易", "Repositories / Unit of Work", "封裝查詢、分頁、Optimistic Concurrency、交易與稽核寫入")
+            Component(emailGateway, "Email Gateway", "SMTP Adapter", "隔離驗證信內容與 Gmail SMTP 呼叫")
+        }
+    }
+
+    ContainerDb(database, "應用程式資料庫", "SQL Server", "保存系統與稽核資料")
+
+    System_Ext(emailService, "Google Gmail SMTP", "寄送帳號驗證信")
+
+    Rel(authController, identityService, "執行帳號使用案例")
+    Rel(userControllers, identityService, "執行使用者使用案例")
+    Rel(projectControllers, projectService, "執行專案使用案例")
+    Rel(taskControllers, taskService, "執行 Task 使用案例")
+
+    Rel(identityService, persistence, "查詢與保存")
+    Rel(projectService, persistence, "查詢與交易")
+    Rel(taskService, persistence, "查詢與交易")
+
+    Rel(identityService, emailGateway, "要求寄送驗證信")
+
+    Rel(persistence, database, "執行參數化查詢與交易", "SQL/TLS")
+    Rel(emailGateway, emailService, "寄送信件", "SMTP/TLS")
+
+    UpdateLayoutConfig($c4ShapeInRow="4", $c4BoundaryInRow="1")

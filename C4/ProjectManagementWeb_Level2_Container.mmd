@@ -1,0 +1,18 @@
+C4Container
+    title Project Management Web - Container Diagram（設計草稿）
+
+    Person(systemUser, "系統使用者", "訪客、專案成員、後台管理員與 Admin")
+    System_Ext(emailService, "Google Gmail SMTP", "寄送帳號驗證信")
+
+    Container_Boundary(myWorkItemBoundary, "My Work Item") {
+        Container(webApp, "前端網站", "Vue 3 SPA", "提供註冊、登入、使用者、專案、Task Item、留言與偏好設定畫面")
+        Container(api, "後端 API", "ASP.NET Core Web API", "執行身分驗證、授權、輸入驗證、業務規則、交易與稽核")
+        ContainerDb(database, "應用程式資料庫", "SQL Server", "保存使用者、角色、登入 Session、專案、成員、Task Item、留言、偏好與稽核資料")
+    }
+
+    Rel(systemUser, webApp, "操作系統", "HTTPS")
+    Rel(webApp, api, "呼叫 RESTful API", "JSON/HTTPS")
+    Rel(api, database, "查詢與寫入資料", "SQL/TLS")
+    Rel(api, emailService, "寄送帳號驗證信", "SMTP/TLS")
+
+    UpdateLayoutConfig($c4ShapeInRow="2", $c4BoundaryInRow="1")
