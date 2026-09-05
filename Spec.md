@@ -1,5 +1,8 @@
 #開發規格
 
+## UserStory
+- UserStory.md
+
 ## UIMock(UI草圖)
 - SignIn.png (登入畫面)
 - SignUp.png (註冊畫面)
