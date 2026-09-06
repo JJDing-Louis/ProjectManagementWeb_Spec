@@ -30,24 +30,28 @@ flowchart TB
 flowchart TB
     sendJobStart([Hangfire 取得 Pending 或 Retry 紀錄]) --> claimSend{原子取得寄送權？}
     claimSend -->|否| sendJobFinished([略過並結束])
-    claimSend -->|是| recheckTask{Task 仍未完成且在提醒範圍？}
+    claimSend -->|是| recheckTask{Task 尚未完成，且提醒日期介於到期前 3 天至逾期後 3 天？}
     recheckTask -->|否| cancelReminder[(標記為 Cancelled)]
-    recheckTask -->|是| composeReminder[產生含期限與 Task 連結的信件]
-    composeReminder --> sendReminder[呼叫 Email 服務]
-    sendReminder --> reminderSent{寄送成功？}
-    reminderSent -->|是| markReminderSent[(記錄 SentAt 與服務回應編號)]
-    reminderSent -->|否| updateAttempt[(記錄錯誤與重試次數)]
-    updateAttempt --> retryLimit{已達重試上限？}
-    retryLimit -->|否| scheduleRetry[(標記為 Retry 並設定下次時間)]
-    retryLimit -->|是| markReminderFailed[標記失敗並留下告警紀錄]
-    cancelReminder --> sendJobEnd([結束寄送工作])
-    markReminderSent --> sendJobEnd
+    recheckTask -->|是| recipientValid{帳號啟用且 Email 已驗證？}
+    recipientValid -->|否| cancelReminder
+    recipientValid -->|是| composeReminder[產生含期限與 Task 連結的信件]
+    composeReminder --> sendReminder[使用既有 Email 設定呼叫服務]
+    sendReminder --> providerAccepted{Email 服務回傳成功？}
+    providerAccepted -->|是| recordSuccess[(寫入 SentAt、服務回應編號並標記 Sent)]
+    recordSuccess --> successRecorded{成功寄送紀錄寫入完成？}
+    successRecorded -->|是| sendJobEnd([結束寄送工作])
+    providerAccepted -->|否| recordFailure[(記錄寄送錯誤)]
+    successRecorded -->|否| recordFailure
+    recordFailure --> retryLimit{已完成 3 次重試？}
+    retryLimit -->|否| scheduleRetry[(Retry 次數加 1，並設定下次時間)]
+    retryLimit -->|是| markReminderFailed[標記為 Failed 並留下告警紀錄]
+    cancelReminder --> sendJobEnd
     scheduleRetry --> sendJobEnd
     markReminderFailed --> sendJobEnd
 ```
 
-「即將到期」要有明確且可設定的範圍，例如以系統時區判斷 `現在時間 <= 交付期限 <= 提醒截止時間`。查詢條件至少包含 Task 尚未完成、指派對象帳號仍啟用，以及 Email 已完成驗證。
+提醒排程每天執行一次，實際執行時間由系統設定。未完成的 Task 從到期前第 3 天開始每天提醒，到期當天仍會提醒；逾期後第 1 天至第 3 天繼續每天提醒，超過第 3 天便停止。同一個持續未完成的 Task，最多會在到期前第 3、2、1 天、到期當天，以及逾期第 1、2、3 天各產生一次提醒。查詢條件至少包含 Task 尚未完成、指派對象帳號仍啟用，以及 Email 已完成驗證。
 
 為了避免排程重複執行或多台主機同時處理，寄送紀錄應以 Task、收件人與提醒規則建立唯一限制，並以原子操作取得寄送權。寄送前還要重新讀取 Task，避免使用者剛完成任務，系統卻仍寄出舊提醒。
 
-Email 是外部服務；若服務已收信，但程式在寫回成功紀錄前中斷，重試仍可能造成極少數重複信件。若供應商支援 Idempotency Key，應使用寄送紀錄編號作為 Key；否則要透過寄送回應編號、有限次重試及告警紀錄降低風險。
+Email 是外部服務；若服務已收信，但程式在寫回成功紀錄前中斷，重試仍可能造成極少數重複信件。若供應商支援 Idempotency Key，應使用寄送紀錄編號作為 Key。初次寄送失敗後，預設最多重試 3 次；達到上限後標記失敗並留下告警紀錄。本功能不另外限制寄件網域或訂定業務層的寄送速率，以 Email 服務回傳成功，且系統成功記錄寄送時間與服務回應編號，作為成功寄出的判定。
