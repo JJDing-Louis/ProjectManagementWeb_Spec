@@ -210,10 +210,10 @@
 #### TC-ST-AUTH-013 Logout 撤銷 token 並清 Cookie
 - **類型與優先級**：State／P0；**測試層級**：API、SQL、UI；**狀態**：Ready
 - **對應需求**：AUTH；API logout contract
-- **前置條件**：已登入。
-- **測試步驟**：呼叫 logout，檢查 Set-Cookie／DB，再 refresh 與開受保護頁。
-- **預期結果**：204；目前 refresh token 撤銷且 cookie 清除；refresh 失敗；UI 回登入頁。
-- **資料後置狀態**：session 結束，業務資料不變。
+- **前置條件**：準備已登入且持有有效 refresh cookie 的 client，以及沒有 cookie、帶未知 cookie 的 client。
+- **測試步驟**：1. 有效 client 呼叫 logout，檢查 Set-Cookie／DB，再 refresh 與開受保護頁。2. 另外以缺少及未知 refresh cookie 呼叫 logout。
+- **預期結果**：三種請求皆為 204 且清除 `PMW-REFRESH` cookie；有效 token 被撤銷且後續 refresh 失敗；缺少或未知 token 採冪等成功、不建立或異動其他 token；UI 回登入頁。
+- **資料後置狀態**：有效 client 的 session 結束；缺少或未知 token 不影響其他 session；業務資料不變。
 - **現有自動化覆蓋**：無。
 
 #### TC-F-AUTH-014 Session restore 與同時 401 single-flight
@@ -269,6 +269,33 @@
 - **預期結果**：兩個維度及跨 instance 都能啟動同一限制；只採信 allowlist proxy 的 forwarded IP；第 1–4 次失敗回 401，第 5 次及限制視窗內後續請求回 429 `rate_limited`；不顯示 CAPTCHA、不鎖定帳號；視窗結束後可登入；稽核不記錄密碼／Token。
 - **資料後置狀態**：帳號狀態不變；只有最後成功登入建立 refresh token；保留不含敏感資料的安全稽核與 rate-limit 計數。
 - **現有自動化覆蓋**：無；rate limit 與登入安全稽核尚未實作。
+
+#### TC-F-AUTH-020 已驗證帳號正常登入與目前帳號資料
+- **類型與優先級**：Functional／P0；**測試層級**：API、SQL、UI、E2E；**狀態**：Ready
+- **對應需求**：AUTH；登入 Flowchart；API login、`/auth/me` 與 Cookie 契約
+- **前置條件**：已啟用且 Email 已驗證的 User、Administrator、Admin 帳號各一；密碼正確。
+- **測試步驟**：1. 取得 CSRF token 與配對 cookie。2. 各帳號登入。3. 檢查 response、`PMW-REFRESH` Set-Cookie 與 RefreshTokens。4. 以 access token 呼叫 `/auth/me`。
+- **預期結果**：CSRF endpoint 回 200 token 與配對 cookie；登入 200；JSON 只含 access token 與到期時間，不含 refresh token；refresh token 只以 HttpOnly、Path=`/api/v1/auth` cookie 傳遞且 DB 僅保存 hash；`/auth/me` 的帳號、Email、名稱、驗證／啟用狀態、唯一系統角色與 functions 均與目前帳號一致；UI 進入原 redirect 或 Task 清單。
+- **資料後置狀態**：每次登入新增一筆有效 refresh token；帳號與業務資料不變。
+- **現有自動化覆蓋**：部分：`mockServices.spec.ts` 驗證 CSRF／Bearer 流程，`app.spec.ts` 驗證登入後載入 Project；未驗證三種角色、Cookie／DB 與 `/auth/me` 完整欄位。
+
+#### TC-ERR-AUTH-021 缺少、未知、過期、已撤銷或停用帳號的 Refresh Token
+- **類型與優先級**：Security／P0；**測試層級**：Service、API、SQL、UI；**狀態**：Ready
+- **對應需求**：AUTH；API refresh contract
+- **前置條件**：固定 TimeProvider；準備未知 token、已過期 token、已撤銷 token，以及 token 有效但帳號已停用的四組資料；另準備無 cookie client。
+- **測試步驟**：各組帶有效 CSRF 配對呼叫 refresh，檢查 Problem Details、Set-Cookie、token family 與前端登入狀態。
+- **預期結果**：缺少 cookie 回 401 `missing_refresh_token`；未知 token 回 401 `invalid_refresh_token`；過期或已撤銷 token 回 401 `refresh_token_reuse` 並撤銷同 family 尚有效 token；停用帳號回 401 `account_disabled` 並撤銷該 token；均不回傳 access／refresh token，UI 清除登入狀態且不得形成重試迴圈。
+- **資料後置狀態**：應撤銷的 token／family 已撤銷；沒有新增 token 或業務資料異動。
+- **現有自動化覆蓋**：部分：`mockServices.spec.ts` 只測前端 refresh 401 清除 access token；Backend 各失敗分支尚無自動化。
+
+#### TC-ERR-AUTH-022 重寄驗證信時 SMTP 失敗
+- **類型與優先級**：Error／P1；**測試層級**：Service、API、SQL、UI；**狀態**：Ready
+- **對應需求**：AUTH；註冊與 Email 驗證 Flowchart 的重寄失敗路徑
+- **前置條件**：未驗證且啟用帳號；重寄限制未觸發；Email gateway 回傳失敗。
+- **測試步驟**：以帳號及 Email 分別重寄，檢查 response、EmailMessages 與驗證頁；恢復 gateway 後再次重寄。
+- **預期結果**：為避免揭露帳號狀態，失敗時仍回 200 一般訊息；EmailMessages 記錄 Failed 與可診斷但不含敏感 token 的錯誤；UI 保留重寄入口且不宣稱已成功寄出；gateway 恢復後可依冷卻／上限規則重試。
+- **資料後置狀態**：失敗寄送有 Failed 紀錄且帳號仍未驗證；恢復後成功重寄的最新版 Token 與舊 Token 狀態另依 TC-ERR-AUTH-015 驗證。
+- **現有自動化覆蓋**：無；現有前端測試只覆蓋註冊首次寄信失敗提示。
 
 ### 4.2 授權、角色、使用者與偏好
 
@@ -342,6 +369,24 @@
 - **測試步驟**：1. 開啟 `/settings`。2. 開啟 `/users/{id}`。3. 檢查可用 API 與畫面操作。
 - **預期結果**：Settings 只提供語言與批次確認偏好；User Detail 只讀顯示帳號、名稱、Email 與驗證狀態，Admin 只可修改系統角色與啟用狀態；不存在 Account、Name、Email 編輯 request。
 - **資料後置狀態**：個資不變；只有使用者明確儲存時才異動偏好、系統角色或啟用狀態。
+- **現有自動化覆蓋**：無。
+
+#### TC-F-USER-009 本人與管理者讀取使用者詳情
+- **類型與優先級**：Functional／P1；**測試層級**：API、UI；**狀態**：Ready
+- **對應需求**：User Story「畫面與查詢契約」；FLOW-USER；`GET /users/{id}`
+- **前置條件**：一般帳號本人、具 `accounts.read` 的 Admin，以及存在與不存在的 userId。
+- **測試步驟**：1. 本人讀取自己的詳情。2. Admin 讀取他人詳情。3. 兩者在已授權條件下讀取不存在 ID。4. 核對 `/users/{id}` 顯示內容與可操作控制。
+- **預期結果**：存在資料回 200，包含帳號、顯示名稱、Email、驗證狀態、啟用狀態、唯一系統角色及 bootstrap 標記；已授權但不存在回 404 `not_found`；一般本人只讀，Admin 僅依 functions 顯示角色／啟用狀態控制，不提供個資編輯。
+- **資料後置狀態**：不變。
+- **現有自動化覆蓋**：無。
+
+#### TC-ERR-USER-010 帳號管理授權與不存在的帳號／角色
+- **類型與優先級**：Security／P0；**測試層級**：Service、API、SQL、UI；**狀態**：Ready
+- **對應需求**：User Story「使用註冊」4；FLOW-USER；使用者管理 API 契約
+- **前置條件**：User、Viewer、Administrator、Admin 各一；準備存在及不存在的 userId、有效及不存在的 roleId。
+- **測試步驟**：1. 非 Admin 三種角色直接呼叫 `/role`、`/status`、`/administration`，目標分別為存在與不存在帳號。2. Admin 對不存在帳號變更狀態。3. Admin 對存在帳號指定不存在角色。4. 檢查 UI、AccountRoles、狀態、TokenVersion、RefreshTokens 與 AuditLogs。
+- **預期結果**：只有具備對應 manage functions 的 Admin 可進入異動流程；非 Admin 對存在或不存在目標皆回 403 且 UI 不顯示操作；Admin 對不存在帳號或角色回 404 `not_found`；所有失敗均不變更角色／狀態、不遞增 TokenVersion、不撤銷 session，也不寫成功 audit。
+- **資料後置狀態**：所有帳號、角色關聯、token 與稽核維持原狀。
 - **現有自動化覆蓋**：無。
 
 #### TC-F-PREF-001 讀寫個人批次確認偏好
@@ -526,6 +571,24 @@
 - **資料後置狀態**：Task 不會指向已移除的未完成責任人。
 - **現有自動化覆蓋**：無。
 
+#### TC-F-MEMBER-008 讀取專案成員與多重角色
+- **類型與優先級**：Functional／P1；**測試層級**：API、SQL、UI；**狀態**：Ready
+- **對應需求**：FLOW-MEMBER；CON-004；`GET /projects/{id}/members`
+- **前置條件**：Project 包含 Owner、單一角色成員、多重角色成員；另有不屬於該 Project 的帳號。
+- **測試步驟**：以 Project 成員及全域管理者讀取 members；核對 Account、Name 與角色集合；再以非成員直接呼叫。
+- **預期結果**：有權者取得該 Project 全部未移除成員，每位成員的多重角色不遺漏、不重複且與 DB 關聯一致；不回傳 Email 等候選／成員 API 未約定欄位；無權者回 403，UI 不顯示其他 Project 成員資料。
+- **資料後置狀態**：不變。
+- **現有自動化覆蓋**：部分：`projectDetailView.spec.ts` 只以 mock 成員資料驗證部分畫面結構，未覆蓋 API／DB 對應。
+
+#### TC-ERR-MEMBER-009 不存在、停用或競態失效的成員候選人
+- **類型與優先級**：Error／P0；**測試層級**：Service、API、SQL、UI；**狀態**：Ready
+- **對應需求**：FLOW-MEMBER「搜尋有效且未停用的使用者」；成員 API 契約
+- **前置條件**：可管理 Project；準備不存在、已停用及原先在候選清單但送出前被停用的帳號。
+- **測試步驟**：1. 直接以不存在或已停用 accountId 加入成員。2. 先取得有效候選人，再於提交前停用該帳號並送出。3. 檢查錯誤、畫面候選清單、ProjectMembers、ProjectMemberRoles 與 AuditLogs。
+- **預期結果**：候選清單不顯示停用帳號；三種加入請求均回 422 `invalid_account`，UI 顯示帳號已不可使用並要求重新選擇；不得建立 membership、角色 mapping 或成功 audit。
+- **資料後置狀態**：Project 成員與角色集合不變。
+- **現有自動化覆蓋**：無。
+
 ### 4.4 Task 清單、詳情與異動
 
 #### TC-F-TASK-001 Task 清單欄位與預設排序
@@ -708,6 +771,24 @@
 - **資料後置狀態**：取消／失敗不變。
 - **現有自動化覆蓋**：無。
 
+#### TC-F-TASK-021 Task 詳情完整欄位、唯讀呈現與編輯導向
+- **類型與優先級**：Functional／P0；**測試層級**：API、UI、E2E；**狀態**：Ready
+- **對應需求**：US-4；Task Detail 畫面與「從詳細頁修改 Task」Flowchart；CON-013
+- **前置條件**：可讀 Task 的 Viewer、被指派 User 與後台管理者；Task 具有完整描述及時間資料，清單 URL 已帶搜尋／篩選／排序／分頁 query。
+- **測試步驟**：各角色由清單開啟 `/projects/{projectId}/task-items/{taskId}`；核對所有欄位、留言區、編輯控制與返回；有修改權角色點擊編輯後取消。
+- **預期結果**：顯示 Task 編號、標題、描述、開始時間、交付期限、建立者、指派對象、狀態、建立與最後更新時間；詳情頁不提供 Task 欄位內聯儲存；Viewer 沒有編輯／留言控制，被指派者與後台管理者依權限顯示編輯入口並導向 `/admin/projects/{projectId}/task-items/{taskId}/edit` 且預填目前資料；取消或返回後保留原清單 query。
+- **資料後置狀態**：檢視、取消與返回皆不異動 Task；瀏覽器保留原清單條件。
+- **現有自動化覆蓋**：無；現有 E2E 未直接覆蓋 Task 詳情完整欄位與角色化操作。
+
+#### TC-ERR-TASK-022 修改 Task 的欄位、指派者與日期驗證
+- **類型與優先級**：Error／P0；**測試層級**：Service、API、SQL、UI；**狀態**：Planned（CON-008）
+- **對應需求**：US-7；US-4 被指派者可修改期限；新增與修改 Task Flowchart；CON-008
+- **前置條件**：後台管理者與 Task 被指派者皆持有最新 rowVersion；另準備不存在、其他 Project 與已移除的成員。
+- **測試步驟**：1. 完整 PUT 分別送空白／301 字標題、description 空值／純空白／8000／8001 字、三種無效 assignee，以及 startAt 晚於 deadline。2. 被指派者 PATCH deadline 為等於及早於既有 startAt。3. 每次失敗後查 Task、history、audit。
+- **預期結果**：合法邊界可保存；空白／超長欄位回 400 `validation_error`，無效 assignee 回 422 `invalid_assignee`，不合法日期回 422 `invalid_deadline`；被指派者 deadline 等於 startAt 可成功，早於 startAt 被拒絕；失敗時 UI 保留輸入，Task、history、audit 均不變。
+- **資料後置狀態**：只有合法邊界案例更新 Task 並產生對應追蹤；失敗案例完全不變。
+- **現有自動化覆蓋**：無；Backend 共用標題／指派者／日期驗證，但尚未在寫入 DB 前驗證 Description 8000 字上限，Frontend 仍把 Description 當必填。
+
 ### 4.5 Task 留言
 
 #### TC-F-CMT-001 讀取留言串
@@ -780,6 +861,15 @@
 - **測試步驟**：用 B Project 或 B Task route 讀／改／刪該留言。
 - **預期結果**：不得洩漏或異動留言；對 route 的 Project scope 無權時一律先回 403，不因留言／Task 不存在改回 404；已授權 scope 內資源不存在才回 404。
 - **資料後置狀態**：不變。
+- **現有自動化覆蓋**：無。
+
+#### TC-ERR-CMT-009 留言儲存失敗時保留未送出內容
+- **類型與優先級**：Failure／P1；**測試層級**：Service、API、UI；**狀態**：Ready
+- **對應需求**：US-4；留言 Flowchart 的 `commentSucceeded` 失敗路徑
+- **前置條件**：具留言權限；可使新增或修改在 DB 儲存時失敗，並可模擬 5xx／網路 timeout。
+- **測試步驟**：1. 輸入含換行的留言並觸發新增儲存失敗。2. 編輯既有留言並觸發失敗。3. 檢查 UI draft、留言串、DB 與 audit。4. 恢復服務後由使用者重送一次。
+- **預期結果**：失敗時顯示可重試的一般錯誤，輸入內容保持原樣且不得顯示假成功；DB 不留下半套留言或成功 audit；恢復後只在使用者明確重送時建立／修改一次並重新載入留言串。
+- **資料後置狀態**：失敗階段資料不變；重送成功後恰有一次留言異動及對應 audit。
 - **現有自動化覆蓋**：無。
 
 ### 4.6 Task 到期提醒（全部 Planned）
@@ -882,6 +972,15 @@
 - **預期結果**：以 Project 當地日期作為冪等鍵，DST 重複／跳時不得重複或遺漏；08:00 漏跑後在同一當地日恢復即補跑，跨日不補前一日；最終 Failed 同時寫 DB 與結構化 log，本期不提供管理 UI。
 - **資料後置狀態**：每 Project／當地日期最多一批 reminder；補跑與最終失敗均可由 DB／log 追蹤。
 - **現有自動化覆蓋**：無；需求已決議，功能與自動化尚未實作。
+
+#### TC-ST-REM-012 寄送前 Task 改期、改派或軟刪除
+- **類型與優先級**：State／P0；**測試層級**：Service、SQL；**狀態**：Planned
+- **對應需求**：US-5；Email 到期提醒 Flowchart 的寄送前重查
+- **前置條件**：已為未完成 Task 與原收件人建立 Pending reminder，但尚未呼叫 Email provider。
+- **測試步驟**：分別在 reminder 建立後、worker 執行寄送前重查之前，將 Task 期限移出當日提醒視窗、改派給另一成員或軟刪除，再執行寄送；下一次掃描檢查新期限／新收件人的資格。
+- **預期結果**：舊 reminder 在寄送前重查後標記 Cancelled 且不寄給原收件人；改派不沿用舊收件人紀錄，新收件人僅在符合其提醒日期時建立獨立唯一紀錄；軟刪除 Task 不再建立提醒；狀態與取消原因可追蹤。
+- **資料後置狀態**：舊 reminder=Cancelled；不產生錯誤收件或重複寄送；後續只保留依最新 Task 狀態合法建立的 reminder。
+- **現有自動化覆蓋**：無；功能尚未實作。
 
 ### 4.7 SQL、API 共通與平台
 
@@ -1080,18 +1179,18 @@
 
 | 需求 | 主要案例 | Happy path | Edge／Error | State／Concurrency | 狀態 |
 |---|---|---:|---:|---:|---|
-| AUTH | AUTH 系列 001–019 | ✓ | ✓ | ✓ | 部分；3 分鐘 Token、重寄／重放與登入 rate limit 皆為 Planned |
+| AUTH | AUTH 系列 001–022 | ✓ | ✓ | ✓ | 部分；3 分鐘 Token、重寄／重放與登入 rate limit 皆為 Planned |
 | US-1 | TASK 系列 001–005 | ✓ | ✓ | ✓ | Ready |
 | US-2 | TASK 系列 006–018、TC-F-PREF-001 | ✓ | ✓ | ✓ | 部分；批次上限與 403 優先序 Planned |
 | US-3 | TC-F-AUTH-014、TC-F-TASK-006 | ✓ | ✓ | ✓ | Ready |
-| US-4 | TC-ST-TASK-003、TC-ERR-TASK-005、CMT 系列 001–008 | ✓ | ✓ | ✓ | Ready |
-| US-5 | REM 系列 001–011、TC-E-PRJ-011 | ✓ | ✓ | ✓ | Planned；時區、DST、補跑、重試及告警契約已決議 |
+| US-4 | TC-ST-TASK-003、TC-ERR-TASK-005、TC-F-TASK-021、CMT 系列 001–009 | ✓ | ✓ | ✓ | Ready |
+| US-5 | REM 系列 001–012、TC-E-PRJ-011 | ✓ | ✓ | ✓ | Planned；時區、DST、補跑、重試及告警契約已決議 |
 | US-6 | TC-F-TASK-008、TC-ERR-TASK-009 | ✓ | ✓ | ✓ | 部分；Description 契約對齊 Planned |
-| US-7 | TASK 系列 010–014 | ✓ | ✓ | ✓ | Ready |
+| US-7 | TASK 系列 010–014、TC-ERR-TASK-022 | ✓ | ✓ | ✓ | 部分；Description 契約對齊 Planned |
 | US-8 | TC-F-TASK-019、TC-ST-TASK-020、TC-SQL-003 | ✓ | ✓ | ✓ | Ready |
 | FLOW-PRJ | PRJ 系列 001–011 | ✓ | ✓ | ✓ | 部分；欄位邊界、Administrator Owner、TimeZoneId 與 Project 軟刪除 Planned |
-| FLOW-MEMBER | MEMBER 系列 001–007 | ✓ | ✓ | ✓ | Ready |
-| FLOW-USER | USER 系列 001–008 | ✓ | ✓ | ✓ | Ready；現行版本不含個資編輯 |
+| FLOW-MEMBER | MEMBER 系列 001–009 | ✓ | ✓ | ✓ | Ready |
+| FLOW-USER | USER 系列 001–010 | ✓ | ✓ | ✓ | Ready；現行版本不含個資編輯 |
 | PREF | PREF 系列 001–002 | ✓ | ✓ | ✓ | Ready |
 | API／DB | SQL 系列 001–008、API 系列 001–005 | ✓ | ✓ | ✓ | 部分；403 優先序、Email UNIQUE 與 Refresh Token self-FK Planned |
 | UI／UIMock | UI 系列 001–008 | ✓ | ✓ | ✓ | Ready；舊 PNG 差異依 `UIMock/README.md` |
@@ -1107,13 +1206,14 @@
 
 ### 6.2 建議自動化優先順序
 
-1. P0 API／Service 授權矩陣：Viewer、User assignee／non-assignee、ProjectManager、Administrator、Admin。
-2. 批次 Task 的全有或全無 transaction、rowVersion 衝突與 audit/history rollback。
-3. 角色／帳號狀態原子更新、最後一位 Admin 並行競態、token revocation。
-4. Project member 加入／角色取代／Owner 移交／未完成 Task 阻擋。
-5. Task／Comment 軟刪除、關聯保存與 query filters。
-6. 前端清單 query、返回狀態、checkbox 權限、確認偏好及 403/409/422 UX。
-7. BE-001 實作後，補齊 TC-ST-REM-001～011 與 TC-E-PRJ-011 的 clock-controlled、IANA timezone 與 SQL concurrency 測試。
+1. P0 Auth API／Service：正常登入、`/auth/me`、refresh 各失敗分支、logout 冪等、Email resend 失敗與 Token 安全規則。
+2. P0 API／Service 授權矩陣：Viewer、User assignee／non-assignee、ProjectManager、Administrator、Admin。
+3. 批次 Task 的全有或全無 transaction、rowVersion 衝突與 audit/history rollback。
+4. 角色／帳號狀態原子更新、最後一位 Admin 並行競態、token revocation。
+5. Project member 查詢／加入／角色取代／Owner 移交／未完成 Task 阻擋。
+6. Task／Comment 詳情、驗證、失敗回復、軟刪除、關聯保存與 query filters。
+7. 前端清單 query、返回狀態、checkbox 權限、確認偏好及 403/409/422 UX。
+8. BE-001 實作後，補齊 TC-ST-REM-001～012 與 TC-E-PRJ-011 的 clock-controlled、IANA timezone 與 SQL concurrency 測試。
 
 ## 7. 執行注意事項
 
