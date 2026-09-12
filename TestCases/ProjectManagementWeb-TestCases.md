@@ -52,7 +52,7 @@
 
 | ID | 最終決議 |
 |---|---|
-| OPEN-001 | Email 驗證 Token 有效期精確為 3 分鐘；重寄冷卻 60 秒，每帳號及每 IP 每小時最多 5 次。 |
+| OPEN-001 | Email 驗證 Token 有效期精確為 3 分鐘；重寄冷卻 60 秒，每帳號及每 IP 於滾動 60 分鐘內最多 5 次。 |
 | OPEN-002 | 登入採帳號與 IP rate limit；滾動 15 分鐘內第 5 次失敗起回 `429 rate_limited`，不鎖帳號，本期不做 CAPTCHA，需保留安全稽核。 |
 | OPEN-003 | 只有已啟用、Email 已驗證且系統角色恰為 `Administrator` 的帳號可擔任 Project Owner；`Admin` 不在允許範圍。 |
 | OPEN-004 | 本期提供 Project 軟刪除；`Administrator` 與 `Admin` 可刪除，記錄 `DeletedByAccountId` 與 AuditLog，不提供還原；子資料隱藏但不實體刪除。 |
@@ -263,7 +263,7 @@
 
 #### TC-SEC-AUTH-019 登入失敗 rate limit、不鎖帳號與安全稽核
 - **類型與優先級**：Security／P0；**測試層級**：Service、API、SQL；**狀態**：Planned（GAP-003、OPEN-002、OPEN-011）
-- **對應需求**：AUTH；GAP-003；OPEN-002
+- **對應需求**：AUTH；GAP-003；OPEN-002；OPEN-011
 - **前置條件**：固定 TimeProvider；有效啟用帳號；設定 allowlist reverse proxy，並準備兩個共用 rate-limit store 的應用執行個體。
 - **測試步驟**：以同帳號／不同 IP 及不同帳號／同 IP 分別在滾動 15 分鐘內送出 5 次錯誤密碼；跨兩個執行個體累計；再送第 6 次與正確密碼；另偽造非可信來源的 forwarded IP；時間推進超過視窗後登入並檢查稽核。
 - **預期結果**：兩個維度及跨 instance 都能啟動同一限制；只採信 allowlist proxy 的 forwarded IP；第 1–4 次失敗回 401，第 5 次及限制視窗內後續請求回 429 `rate_limited`；不顯示 CAPTCHA、不鎖定帳號；視窗結束後可登入；稽核不記錄密碼／Token。
@@ -870,7 +870,7 @@
 - **對應需求**：US-5；GAP-012；OPEN-005
 - **前置條件**：至少三個不同 UTC offset 的 IANA TimeZoneId Project，Task 皆在提醒視窗內；固定 TimeProvider。
 - **測試步驟**：沿 UTC 時間軸推進並逐分鐘執行 scheduler 判斷；記錄各 Project scanner 的當地執行時間。
-- **預期結果**：每個 Project 每個當地日只在 08:00 取得一次掃描資格；不得以伺服器本機時區統一判斷；同一 UTC 時刻可執行零至多個 Project。
+- **預期結果**：正常運行時每個 Project 於當地日 08:00 取得一次掃描資格；若 08:00 未執行，當地日內恢復後仍可取得一次補跑資格；不得以伺服器本機時區統一判斷，同一 UTC 時刻可執行零至多個 Project。
 - **資料後置狀態**：每 Project／當地提醒日期最多建立一批符合資格的 reminder。
 - **現有自動化覆蓋**：無；Project timezone 與 scheduler 尚未實作。
 
@@ -881,7 +881,7 @@
 - **測試步驟**：測 DST 切換日、08:00 前後停機／恢復、同一當地時間重複，以及達到 retry 上限後的營運查詢。
 - **預期結果**：以 Project 當地日期作為冪等鍵，DST 重複／跳時不得重複或遺漏；08:00 漏跑後在同一當地日恢復即補跑，跨日不補前一日；最終 Failed 同時寫 DB 與結構化 log，本期不提供管理 UI。
 - **資料後置狀態**：每 Project／當地日期最多一批 reminder；補跑與最終失敗均可由 DB／log 追蹤。
-- **現有自動化覆蓋**：無；需求細節與功能皆尚未完成。
+- **現有自動化覆蓋**：無；需求已決議，功能與自動化尚未實作。
 
 ### 4.7 SQL、API 共通與平台
 
@@ -914,7 +914,7 @@
 
 #### TC-SQL-004 FK 與刪除行為
 - **類型與優先級**：Data integrity／P1；**測試層級**：SQL；**狀態**：Planned（OPEN-009；其餘既有 FK 可先執行）
-- **對應需求**：DB
+- **對應需求**：DB；OPEN-009
 - **前置條件**：完整關聯資料。
 - **測試步驟**：嘗試刪除被 Project/Task/history/comment/audit 參照的 Account、Project、Task；另刪除 membership，並嘗試刪除被 Projects.DeletedByAccountId 參照的 Account。
 - **預期結果**：既有 Restrict/NoAction 防止遺失歷史；刪 membership 僅 cascade 其 ProjectMemberRoles；Identity 支援資料依 migration 規則處理；被 DeletedByAccountId 參照的 Account 因 NoAction 不得刪除。
