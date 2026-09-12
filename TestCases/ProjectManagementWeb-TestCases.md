@@ -2,7 +2,7 @@
 
 ## 1. 文件資訊
 
-- **產出日期**：2026-09-07
+- **產出日期**：2026-09-07；**最後更新**：2026-09-12
 - **需求來源**：`UserStory.md`、`Flowchart/`、`Schema.md`、`StaticData.md`、`UIMock/`、Backend API／EF Core migrations／現有測試、Frontend routes／views／services／現有測試
 - **測試範圍**：帳號與驗證、授權與 Session、使用者管理、偏好、專案與成員、Task 清單與異動、留言、到期提醒、SQL 完整性、UI／E2E
 - **狀態定義**：`Ready` 表示已有可測介面；`Planned` 表示需求已定義但功能尚未實作，或因契約缺口尚不能執行。
@@ -20,33 +20,48 @@
 | CON-004 | Project Role 基數 | 舊 Schema／草圖／流程看似單一角色 | 成員可有多個 Project Roles；修改時完整取代且至少一個 | 已更新 User Story、Flowchart、Schema 與 UI 草圖契約 |
 | CON-005 | Task 清單批次刪除 | 舊草圖暗示 checkbox 支援批次刪除 | checkbox 只供批次改狀態；刪除為後台每列單筆軟刪除 | 已更新 `UIMock/README.md` |
 | CON-006 | 批次目標狀態初始值 | User Story 要求先選狀態，UI 預設 `InProgress` | 保留 `InProgress` 預設值；只在未選 Task 時停用確認 | 已更新 User Story、Flowchart 與 UI 草圖契約 |
-| CON-007 | Project 表單限制 | Frontend 與 Backend／DB 不一致 | Name trim 後 1–200 字；Description 選填且最多 4000 字 | 已更新 User Story、Flowchart 與 UI 草圖契約；Frontend 尚待對齊 |
-| CON-008 | Task Description 必填 | Frontend 必填，Backend／DB 允許空值 | Description 選填；有值時 trim 後最多 8000 字 | 已更新 User Story、Flowchart 與 UI 草圖契約；Frontend 尚待對齊 |
+| CON-007 | Project 表單限制 | Frontend 與 Backend／DB 不一致 | Name trim 後 1–200 字；Description 選填且最多 4000 字 | 規格已決議；Frontend 欄位限制及 Backend 邊界驗證尚待對齊 |
+| CON-008 | Task Description 必填 | Frontend 必填，Backend／DB 允許空值 | Description 選填；有值時 trim 後最多 8000 字 | 規格已決議；Frontend 必填限制及 Backend 8000 字邊界驗證尚待對齊 |
 | CON-009 | 使用者設定範圍 | 舊草圖將個資、系統角色與專案角色放在同頁 | Settings 只管理語言與批次確認偏好；系統角色／啟用狀態在 User Detail；Project Roles 在 Project Detail | 已更新 User Story、C4 與 UI 草圖契約 |
 | CON-010 | Schema 主鍵與資料模型 | 舊 Schema 為字串主鍵與明文式 Password | 以 EF migrations／model snapshot 為正式來源，使用 Identity GUID、`PasswordHash`、獨立關聯與 rowversion | `Schema.md` 已依現行模型改寫 |
-| CON-011 | C4 Email 範圍 | C4 只繪出驗證信 | 加入到期提醒 Scanner、Sender、紀錄、retry 與告警，全部明確標為 Planned | C4 已更新，不代表功能已實作 |
+| CON-011 | C4 Email 範圍 | C4 只繪出驗證信 | 到期提醒需包含 Scanner、Sender、唯一寄送紀錄、retry 與告警，未完成前一律標為 Planned | User Story、提醒 Flowchart、Backlog 與彙整版 C4 已對齊；獨立 Level 1／2／3B C4 圖仍待同步，營運參數、Backend、Schema 與自動化測試尚待完成 |
 | CON-012 | Project 清單搜尋方式 | 舊草圖為多欄位查詢與 Owner 篩選 | 單一 search 查 Code／Name／Description，另有 status；無 Owner filter | 已更新 User Story 與 UI 草圖契約 |
 | CON-013 | Task 詳情操作型態 | 舊草圖在詳情頁直接 Confirm／Cancel | Task Detail 為詳情與留言；修改導向 `/admin/projects/{projectId}/task-items/{taskId}/edit` | 已更新 User Story、Flowchart、C4 與 UI 草圖契約 |
 
-### 2.2 規格與實作缺口
+### 2.2 已確認的缺口處理方針
 
-| ID | 缺口 | 影響 |
+| ID | 已確認規則 | 待完成工作 | 驗收重點 | 狀態 |
+|---|---|---|---|---|
+| GAP-001 | 顯示名稱必填，trim 後為 1–100 字。 | Frontend 加上相同必填、trim 與 `maxlength=100` 規則；Backend 維持相同邊界與欄位錯誤。 | 0/1/100/101 字與純空白；UI/API 接受及拒絕界線一致。 | 已決議，待實作對齊 |
+| GAP-002 | 每次重新寄送 Email 驗證信後，先前發出的驗證 Token 必須立即失效。 | Backend 建立可辨識最新版 Token 的版本／nonce 或等效機制；最新版 Token 是否只能使用一次另待確認。 | Token A 重寄取得 Token B 後，A 必須失敗且 B 必須有效；有效期、重寄頻率與重放語意另列 OPEN。 | 部分決議，待補其餘安全契約 |
+| GAP-003 | 登入失敗不鎖定帳號，不以失敗次數變更帳號啟用狀態。 | 現行 Backend 已使用不累計鎖定的密碼檢查；需補自動化回歸測試，其他流量防護另待確認。 | 連續失敗後，正確密碼仍可登入；停用帳號仍須拒絕。 | 規則與現行實作已對齊；待補測試 |
+| GAP-004 | Project 的 `Pending／Active／Completed／Archived` 目前允許任意互轉。 | User Story、API contract、Domain 與測試統一採無狀態轉換限制。 | 覆蓋 4×4 組合，包含更新為相同狀態。 | Backend 已對齊；待同步文件與補測試 |
+| GAP-005 | Task 的 `Pending／InProgress／Blocked／Completed` 目前允許任意互轉。 | Flowchart 移除「可能因狀態轉換無效而拒絕」的暗示；Backend 與測試維持 4×4。 | 單筆、被指派者更新及批次更新皆覆蓋 4×4，包含相同狀態。 | Backend 已對齊；待同步文件與補測試 |
+| GAP-006 | Project Owner 必須是啟用且 Email 已驗證的有效帳號；修改 Owner 時還必須已是該 Project 成員。 | Backend 建立與修改 Project 都檢查 `IsEnabled=true`、`EmailConfirmed=true`；Frontend Owner 候選清單套用相同條件。 | 未驗證、停用、不存在及修改時非成員皆拒絕，且不建立 Project／不移交 Owner。 | 已決議，待實作 |
+| GAP-007 | UI checkbox 可選超過 10 筆，但單次批次狀態更新最多只能送出 10 筆。 | UI 選取超過 10 筆時保留選取，但停用送出並提示上限；Backend 對 11 筆以上回 `400 validation_error`，不得只取前 10 筆。 | 測 0/1/10/11 筆；11 筆時整批不更新，10 筆仍維持單一交易。 | 已決議，待實作 |
+| GAP-008 | 同時符合「無權限」與「資源不存在」時優先回 `403`，避免洩漏資源存在性。 | 所有 Project-scoped Service/API 統一先檢查功能與資料範圍授權，再在已授權範圍內判斷 `404`。 | 無權＋存在、無權＋不存在皆為 403；有權＋不存在才是 404。 | 已決議，待全面盤點 |
+| GAP-009 | `Projects.DeletedAt` 必須保留，專門表示 Project 軟刪除；一般查詢預設排除已軟刪除資料。 | 現行 Entity、Schema 與 query filter 已保留；若要提供刪除操作，必須另補 User Story、權限、關聯資料與 API 契約。 | 設值後一般 list/detail 不可讀取；資料列及需要保留的歷史／稽核不可被實體刪除。 | 欄位與 query filter 已對齊；刪除操作範圍待確認 |
+| GAP-010 | `Accounts.NormalizedEmail` 必須在 Database 層唯一，不允許重複。 | 新增 UNIQUE index migration，套用前先盤點並處理既有重複資料；欄位 nullability、index filter 與衝突回應契約確認後再實作。 | 大小寫不同但正規化後相同的 Email、並行註冊、NULL 規則與 migration 前置資料檢查。 | 唯一性已決議；其餘細節待確認 |
+| GAP-011 | `RefreshTokens.ReplacedByTokenId` 必須補上 nullable self-referencing Foreign Key。 | 補 EF mapping 與 migration；FK 的刪除行為確認後再定案，不預先假設 Restrict／NoAction。 | 不存在的 replacement ID 被 DB 拒絕；合法 rotation chain 可保存；刪除行為符合明確決議。 | FK 已決議；DeleteBehavior 待確認 |
+| GAP-012 | Task 到期提醒須依既有 User Story、Flowchart、C4 與 Backlog 完整實作。 | 補提醒資料表與唯一限制、每日 Scanner、單封 Sender、claim、retry、告警、設定與自動化測試；未完成前維持 Planned。 | 同 Task／收件人／提醒日期不重複；多 worker、重跑、Task 完成、帳號失效與寄送失敗皆符合規格。 | 已決議，待確認完整契約後實作 |
+| GAP-013 | Backend 核心 Service/API 授權、交易與並行路徑必須補自動化測試。 | 優先補角色矩陣、批次 rollback、rowversion、Owner、成員角色、token rotation、軟刪除及 audit/history。 | 使用實際 SQL Server 驗證 relational constraint、transaction 與 concurrency；不得以 EF InMemory 取代。 | 已決議，待實作 |
+| GAP-014 | Frontend 必須補 Task 清單、批次、留言、角色與主要錯誤流程的 Component／E2E 測試。 | 補 URL query／返回狀態、checkbox、10 筆上限、偏好、留言、角色複選及 403/409/422 UX。 | Vitest 驗證元件行為；Playwright 驗證前後端整合，不只檢查元素存在。 | 已決議，待實作 |
+| GAP-015 | Frontend `AGENTS.md` 必須更新為目前已完成 Vue 3 初始化且已串接 Backend 的現況。 | 移除「尚未建立前端專案」敘述，保留現行 Vue 3、TypeScript、Vite、Pinia、Router、Vitest 與 Playwright 規範。 | 文件敘述與 `package.json`、目錄、route、service 及測試工具一致。 | 已決議，待文件更新 |
+
+### 2.3 實作前仍需確認的不足
+
+下列項目尚無法從目前決議得到唯一、可驗收的規則；確認前不得自行實作：
+
+| ID | 尚缺決策 | 影響 |
 |---|---|---|
-| GAP-001 | 顯示名稱已定為必填且 trim 後 1–100 字，但 Frontend input 尚未設定 `maxlength=100`。 | API 會拒絕超長輸入，但 UI 無法在送出前提供立即回饋。 |
-| GAP-002 | Email 驗證 token 的明確有效期間、重寄後舊 token 是否失效、重寄冷卻／頻率未定義。 | 過期與重送安全案例只能部分執行。 |
-| GAP-003 | 登入失敗鎖定、rate limit、CAPTCHA 與稽核要求未定義。 | 暴力嘗試防護無可驗收門檻。 |
-| GAP-004 | Project status 的合法狀態轉換未定義；目前 API 接受 enum 內任意目標。 | 只能測現行 enum，不能斷言業務狀態機。 |
-| GAP-005 | Task Flowchart 寫需驗證狀態轉換，但正式 Backend contract 表示四種狀態可任意互轉。 | 本文件測目前契約的 4×4 轉換；若要限制需先定義矩陣。 |
-| GAP-006 | 建立 Project 的 Owner 是否必須 Email 已驗證、能否為有效 Viewer 未定義；現況只要求啟用帳號。 | 不對驗證狀態自行加限制。 |
-| GAP-007 | 批次 Task 最大筆數、request body 上限與大型批次效能門檻未定義。 | 資源耗盡與效能測試沒有 pass/fail 數字。 |
-| GAP-008 | 無權限且資源不存在時應優先回 403 或 404 未明定；目前部分 service 先做資源範圍授權。 | 防枚舉與錯誤語意需統一。 |
-| GAP-009 | Project 沒有刪除 User Story／API，但 Domain 有 `DeletedAt`。 | 不建立 Project 刪除功能案例。 |
-| GAP-010 | `Accounts.NormalizedEmail` 在 runtime 要求唯一，但 migration 不是 UNIQUE。 | 繞過應用服務可能建立重複 Email；列 SQL Planned 案例。 |
-| GAP-011 | `RefreshTokens.ReplacedByTokenId` 沒有 FK。 | Token chain 完整性依賴應用服務，資料庫不能獨立保證。 |
-| GAP-012 | 到期提醒沒有資料表、migration、排程、worker、API／管理介面與告警查詢。 | 全模組 Planned。 |
-| GAP-013 | 現有 Backend 自動化主要是模型、註冊驗證、OpenAPI 與編號 constraint；核心 service/API 授權與交易幾乎未覆蓋。 | 高風險核心流程需優先自動化。 |
-| GAP-014 | 現有 Frontend E2E 只涵蓋登入、語言、RWD 導覽、refresh、建立 Project/Task；列表、批次、留言、角色與錯誤流程未涵蓋。 | 多數 P0/P1 案例仍為手動。 |
-| GAP-015 | Frontend `AGENTS.md` 仍寫「尚未建立前端專案」，與 repository 現況不符。 | 文件狀態可能誤導測試與開發。 |
+| OPEN-001 | Email 驗證 Token 的有效期間，以及重新寄送的冷卻時間、單位時間上限。 | GAP-002 的過期、濫用防護與排程測試仍沒有 pass/fail 數字。 |
+| OPEN-002 | 「登入失敗不鎖定」之外，是否需要 IP／帳號層 rate limit、CAPTCHA 或安全稽核門檻。 | GAP-003 已能測不鎖帳號，但仍無法驗收暴力嘗試流量防護。 |
+| OPEN-003 | Project Owner 是否允許由已啟用、已驗證的 `Viewer` 擔任。 | GAP-006 的候選清單與 Backend role eligibility 尚未完整。 |
+| OPEN-004 | Project 軟刪除是否要在本期提供 API／UI、允許哪些角色執行、是否可還原，以及 Task／Member 的可見性與後續操作。 | GAP-009 目前只確認欄位與 query filter，尚不能建立完整刪除 E2E 驗收。 |
+| OPEN-005 | Task 到期提醒採用的產品時區、每日執行時間、retry 間隔／退避策略、告警輸出位置，以及是否需要管理查詢介面。 | CON-011／GAP-012 的架構方向一致，但仍不足以安全完成排程與營運驗收。 |
+| OPEN-006 | `NormalizedEmail` 是否改為 DB `NOT NULL`，或保留 nullable 並建立 filtered UNIQUE index；並行重複時 API 應回哪個固定 HTTP status、`code` 與欄位錯誤。 | GAP-010 的 migration 形狀與 API／UI 可驗收結果尚不能唯一決定。 |
+| OPEN-007 | 最新一枚 Email 驗證 Token 成功使用後，再次使用同一 Token 應回成功（冪等）或失敗（一次性）；跨帳號攻擊是否消耗原 Token。 | GAP-002 目前只確認「重寄使舊 Token 失效」，尚不能把重放語意當成已決議。 |
+| OPEN-008 | `RefreshTokens.ReplacedByTokenId` self-FK 的 DeleteBehavior 採 Restrict／NoAction，或允許其他明確策略。 | GAP-011 的 FK 必要性已確認，但 migration 與實體刪除測試仍需要唯一規則。 |
 
 ## 3. 需求代碼
 
@@ -84,13 +99,13 @@
 - **現有自動化覆蓋**：部分：`ApiSurfaceTests` 只測欄位錯誤；`SignUpView.spec.ts` 只 mock 成功導頁。
 
 #### TC-E-AUTH-002 註冊欄位邊界
-- **類型與優先級**：Edge／P1；**測試層級**：Unit、API、UI；**狀態**：Ready
+- **類型與優先級**：Edge／P1；**測試層級**：Unit、API、UI；**狀態**：Planned（GAP-001）
 - **對應需求**：AUTH；`RegistrationRules`
 - **前置條件**：無。
-- **測試步驟**：分別送出帳號 256/257 字、名稱 100/101 字、密碼 9/10 字，以及合法帳號字元 `-._@+`。
-- **預期結果**：上限內通過格式驗證；超界回 400 且 errors 對應正確欄位；UI 保留輸入。
+- **測試步驟**：分別送出帳號 256/257 字、顯示名稱 trim 後 0/1/100/101 字與純空白、密碼 9/10 字，以及合法帳號字元 `-._@+`；同步檢查 UI 的 required、trim 與 `maxlength=100`。
+- **預期結果**：顯示名稱 1/100 字可送出，0/101 字與純空白在 UI 阻擋且 API 回 400 欄位錯誤；其他欄位上限內通過、超界拒絕；UI 與 API 邊界一致並保留失敗輸入。
 - **資料後置狀態**：失敗組不新增帳號；成功組依個案清理。
-- **現有自動化覆蓋**：部分：`RegistrationValidatorTests` 僅測一般有效／無效值。
+- **現有自動化覆蓋**：部分：`RegistrationValidatorTests` 僅測一般有效／無效值；Frontend 顯示名稱目前未設定 `maxlength=100`。
 
 #### TC-ERR-AUTH-003 註冊空白與弱密碼
 - **類型與優先級**：Error／P0；**測試層級**：Unit、API、UI；**狀態**：Ready
@@ -141,9 +156,9 @@
 - **類型與優先級**：Security／P0；**測試層級**：API、UI；**狀態**：Ready
 - **對應需求**：AUTH；登入 Flowchart 的防帳號枚舉要求
 - **前置條件**：準備不存在帳號、有效帳號與停用帳號。
-- **測試步驟**：以不存在帳號、錯密碼、停用帳號登入。
-- **預期結果**：皆回 401 `invalid_credentials` 與相同一般訊息；不洩漏帳號存在或停用狀態。
-- **資料後置狀態**：不新增 refresh token。
+- **測試步驟**：1. 以不存在帳號、錯密碼、停用帳號登入。2. 對有效帳號連續送出錯誤密碼。3. 隨後以正確密碼登入。
+- **預期結果**：失敗皆回 401 `invalid_credentials` 與相同一般訊息；不洩漏帳號存在或停用狀態；錯誤登入不鎖定帳號、不停用帳號，之後正確密碼仍可登入。
+- **資料後置狀態**：失敗時不新增 refresh token，且不因失敗次數改變帳號啟用／鎖定狀態；最後成功登入才新增 token。
 - **現有自動化覆蓋**：無。
 
 #### TC-ST-AUTH-009 Email 驗證成功但角色不自動提升
@@ -199,6 +214,33 @@
 - **預期結果**：只送一次 refresh；取得新 access token 後各原 request 最多重送一次；不形成 loop。
 - **資料後置狀態**：保持登入並完成 token rotation。
 - **現有自動化覆蓋**：完整（部分層級）：`mockServices.spec.ts` 三案例、`app.spec.ts` refresh E2E。
+
+#### TC-ERR-AUTH-015 重寄後舊 Email 驗證 Token 立即失效
+- **類型與優先級**：Security／P0；**測試層級**：Service、API、SQL；**狀態**：Planned（GAP-002）
+- **對應需求**：AUTH；Email 驗證 Flowchart；GAP-002
+- **前置條件**：同一未驗證啟用帳號已取得 Token A；Backend 已實作可辨識最新版 Token 的版本／nonce 或等效機制。
+- **測試步驟**：1. 重寄並取得 Token B。2. 以 Token A 驗證。3. 以 Token B 驗證。
+- **預期結果**：Token A 在重寄完成後立即回 400 `invalid_email_token`；Token B 可成功驗證；回應不揭露失效原因細節。
+- **資料後置狀態**：帳號只由最新版 Token 驗證成功；Token A 無法再改變資料。
+- **現有自動化覆蓋**：無；目前 Identity Email Token 未綁定「最新一次重寄」版本，因此功能尚未實作。
+
+#### TC-ERR-AUTH-016 已使用 Email 驗證 Token 的重放語意
+- **類型與優先級**：Security／P0；**測試層級**：Service、API、SQL；**狀態**：Planned（待 OPEN-007 決議）
+- **對應需求**：AUTH；OPEN-007（提案，尚未定案）
+- **前置條件**：未驗證啟用帳號持有目前最新版 Token。
+- **測試步驟**：1. 使用 Token 完成驗證。2. 以相同 Token 再次呼叫驗證端點。
+- **預期結果**：第一次成功；第二次的成功／失敗與固定 error code 需依 OPEN-007 決議填入，確認前不得實作此斷言。
+- **資料後置狀態**：帳號只產生一次有效驗證狀態轉換，重放不產生額外狀態或稽核異動。
+- **現有自動化覆蓋**：無；需求尚待確認。
+
+#### TC-ERR-AUTH-017 Email 驗證 Token 不可跨帳號使用
+- **類型與優先級**：Security／P0；**測試層級**：Service、API；**狀態**：Ready
+- **對應需求**：AUTH；Email 驗證 Token 的帳號綁定安全契約
+- **前置條件**：未驗證帳號 A、B；Token A 為 A 的最新版 Token。
+- **測試步驟**：以帳號 B 的 accountId 搭配 Token A 呼叫驗證端點。
+- **預期結果**：回 400 `invalid_email_token`，不揭露 Token 原本屬於哪個帳號。
+- **資料後置狀態**：帳號 A、B 均維持未驗證；本案例不斷言攻擊請求後 Token A 的可用性，該語意另由 OPEN-007 決議。
+- **現有自動化覆蓋**：無。
 
 ### 4.2 授權、角色、使用者與偏好
 
@@ -313,20 +355,20 @@
 - **現有自動化覆蓋**：無。
 
 #### TC-F-PRJ-003 建立 Project 與自動 Owner membership
-- **類型與優先級**：Functional／P0；**測試層級**：API、SQL、E2E；**狀態**：Ready
+- **類型與優先級**：Functional／P0；**測試層級**：API、SQL、E2E；**狀態**：Planned（GAP-006）
 - **對應需求**：FLOW-PRJ；API Project contract
-- **前置條件**：具 projects.create；有效啟用 Owner。
+- **前置條件**：具 projects.create；Owner 帳號啟用且 Email 已驗證。
 - **測試步驟**：建立 Project，檢查 response、Projects、ProjectMembers、ProjectMemberRoles、AuditLogs。
-- **預期結果**：201；狀態 Pending、versionNumber=1；產生 `PRJ-YYYYMMDD######`；Owner 自動成為 member 且具 ProjectManager；建立稽核。
+- **預期結果**：201；狀態 Pending、versionNumber=1；產生 `PRJ-YYYYMMDD######`；已驗證 Owner 自動成為 member 且具 ProjectManager；建立稽核。
 - **資料後置狀態**：Project 與 Owner 關聯完整。
-- **現有自動化覆蓋**：部分：`app.spec.ts` 測 Admin 建立與 code 格式；編號另有 SQL tests。
+- **現有自動化覆蓋**：部分：`app.spec.ts` 測 Admin 建立與 code 格式；編號另有 SQL tests；Backend 目前只檢查 Owner 啟用狀態，尚未檢查 Email 驗證。
 
 #### TC-ERR-PRJ-004 無權建立與無效 Owner
-- **類型與優先級**：Security／P0；**測試層級**：API、SQL；**狀態**：Ready
+- **類型與優先級**：Security／P0；**測試層級**：API、SQL；**狀態**：Planned（GAP-006）
 - **對應需求**：FLOW-PRJ
-- **前置條件**：Viewer／User；不存在或停用 Owner。
-- **測試步驟**：無權角色建立；有權角色以各種無效 Owner 建立。
-- **預期結果**：無權 403；無效 Owner 422 `invalid_owner`；不消耗已 rollback 的業務編號，不產生孤兒資料。
+- **前置條件**：Viewer／User；不存在、停用或 Email 未驗證的 Owner。
+- **測試步驟**：1. 無權角色建立。2. 有權角色分別以不存在、停用、未驗證 Owner 建立。3. 修改 Project 時分別指定非成員、停用成員、未驗證成員為 Owner。
+- **預期結果**：無權 403；任一無效 Owner 回 422 `invalid_owner`；建立失敗不消耗已 rollback 的業務編號、不產生孤兒資料；修改失敗不移交 Owner。
 - **資料後置狀態**：不變。
 - **現有自動化覆蓋**：部分：`SqlServerConstraintTests` 測編號 rollback，不測 Project service。
 
@@ -340,13 +382,13 @@
 - **現有自動化覆蓋**：無；Frontend 現況仍為名稱 2–120 字且 Description 必填。
 
 #### TC-ST-PRJ-006 修改 Project 並增加版本
-- **類型與優先級**：State／P0；**測試層級**：API、SQL、UI；**狀態**：Ready
+- **類型與優先級**：State／P0；**測試層級**：API、SQL、UI；**狀態**：Planned（GAP-006）
 - **對應需求**：FLOW-PRJ；optimistic concurrency
-- **前置條件**：可管理 Project，持有最新 rowVersion。
+- **前置條件**：可管理 Project，持有最新 rowVersion；新 Owner 是已啟用、Email 已驗證的既有 Project 成員。
 - **測試步驟**：更新名稱、說明、Owner、status；重新讀取。
 - **預期結果**：200；基本資料更新；VersionNumber 加 1；回傳新 rowVersion；稽核含前後資料；成員／Task 異動不增加 VersionNumber。
 - **資料後置狀態**：保存新資料與版本。
-- **現有自動化覆蓋**：部分：`DomainEntityTests`、`DatabaseModelTests` 只測 VersionNumber。
+- **現有自動化覆蓋**：部分：`DomainEntityTests`、`DatabaseModelTests` 只測 VersionNumber；Backend 目前未確認新 Owner 的啟用與 Email 驗證狀態。
 
 #### TC-ERR-PRJ-007 Project rowVersion 衝突
 - **類型與優先級**：Concurrency／P0；**測試層級**：API、SQL、UI；**狀態**：Ready
@@ -356,6 +398,15 @@
 - **預期結果**：B 回 409 `concurrency_conflict`；UI 保留輸入並要求重新載入；A 資料不被覆蓋。
 - **資料後置狀態**：只保留 A 更新。
 - **現有自動化覆蓋**：無。
+
+#### TC-ST-PRJ-008 四種 Project status 任意互轉
+- **類型與優先級**：State／P1；**測試層級**：Unit、API；**狀態**：Ready（GAP-004）
+- **對應需求**：FLOW-PRJ；GAP-004
+- **前置條件**：可管理 Project，且每次操作持有最新 rowVersion。
+- **測試步驟**：以資料驅動覆蓋 Pending／Active／Completed／Archived 的 16 組 source→target。
+- **預期結果**：16 組均可成功，包含更新為相同狀態；每次成功更新依契約增加版本並留下稽核，不回傳狀態轉換錯誤。
+- **資料後置狀態**：每次操作後為指定目標狀態，並保存最新 rowVersion／VersionNumber。
+- **現有自動化覆蓋**：部分：`DomainEntityTests` 只驗證 Pending→Active，未覆蓋 16 組。
 
 #### TC-F-MEMBER-001 成員候選人搜尋與最小揭露
 - **類型與優先級**：Security／P1；**測試層級**：API、UI；**狀態**：Ready
@@ -463,7 +514,7 @@
 - **對應需求**：US-1、US-4
 - **前置條件**：Task 屬於 A；一般使用者只屬於 A 或只屬於 B。
 - **測試步驟**：以 A taskId 搭配 B route projectId；非成員直接讀 list/detail/comments。
-- **預期結果**：跨 route 的 Task 不得回傳；非成員 403；具 A 權限但錯 route 應 404。不存在與無權優先序見 GAP-008。
+- **預期結果**：跨 route 的 Task 不得回傳；對 Project scope 無權時，不論 Task 是否存在皆回 403；已通過 scope 授權但 Task 不存在或不屬該 route 時才回 404。
 - **資料後置狀態**：不變。
 - **現有自動化覆蓋**：無。
 
@@ -495,13 +546,13 @@
 - **現有自動化覆蓋**：部分：`app.spec.ts` 測 Admin 建立與 code；無 DB history 驗證。
 
 #### TC-ERR-TASK-009 新增 Task 驗證
-- **類型與優先級**：Error／P0；**測試層級**：API、UI、SQL；**狀態**：Ready
+- **類型與優先級**：Error／P0；**測試層級**：API、UI、SQL；**狀態**：Planned（CON-008）
 - **對應需求**：US-6
 - **前置條件**：可建立 Task。
-- **測試步驟**：測空標題、301 字標題、不存在／其他 Project assignee、startAt>deadline；另 API 送空 description。
+- **測試步驟**：測空標題、301 字標題、不存在／其他 Project assignee、startAt>deadline；另送 description 空值、純空白、8000 與 8001 字。
 - **預期結果**：非法資料回 400/422 對應 code；依正式契約，空 description 可接受，有值時 trim 後最多 8000 字；失敗不產生 Task/history/audit 或消耗編號。
 - **資料後置狀態**：失敗個案不變。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：無；Frontend 仍要求 Description，Backend 尚未在寫入 DB 前把 8001 字映射為欄位驗證錯誤。
 
 #### TC-F-TASK-010 後台完整修改 Task
 - **類型與優先級**：Functional／P0；**測試層級**：API、SQL、UI；**狀態**：Ready
@@ -549,31 +600,31 @@
 - **現有自動化覆蓋**：無。
 
 #### TC-F-TASK-015 批次狀態更新成功
-- **類型與優先級**：Functional／P0；**測試層級**：Service、API、SQL、UI；**狀態**：Ready
+- **類型與優先級**：Functional／P0；**測試層級**：Service、API、SQL、UI；**狀態**：Planned（GAP-007）
 - **對應需求**：US-2；批次 Flowchart
-- **前置條件**：選取多筆皆有權且 rowVersion 最新。
-- **測試步驟**：確認視窗檢查筆數／目標；送 batch-status；查詢 Task、history、audit；重載 UI。
+- **前置條件**：選取 1 或 10 筆，皆有權且 rowVersion 最新。
+- **測試步驟**：分別以 1、10 筆確認視窗檢查筆數／目標；送 batch-status；查詢 Task、history、audit；重載 UI。
 - **預期結果**：200 `updatedCount=X`；同一 transaction 全部改為目標狀態；每筆有 history/audit；清除選取並顯示成功筆數。
 - **資料後置狀態**：所有選取 Task 一致更新。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：無；目前 UI 與 Backend 都沒有單批 10 筆上限。
 
 #### TC-ERR-TASK-016 批次資料任一筆失敗全部 rollback
-- **類型與優先級**：Transaction／P0；**測試層級**：Service、API、SQL、UI；**狀態**：Ready
+- **類型與優先級**：Transaction／P0；**測試層級**：Service、API、SQL、UI；**狀態**：Planned（GAP-008）
 - **對應需求**：US-2；批次 Flowchart
 - **前置條件**：混入無權、跨 Project、不存在或 stale rowVersion 任一筆。
 - **測試步驟**：對每類錯誤各送一批；失敗後查全部 Task/history/audit。
-- **預期結果**：對應 403/404/409；沒有任何 Task 更新，也不留下該批 history/audit；UI 保留原畫面與選取並顯示原因。
+- **預期結果**：含無權項目時，即使同批另含不存在項目也優先回 403；全部已授權但含不存在項目才回 404；版本衝突回 409；沒有任何 Task 更新，也不留下該批 history/audit；UI 保留原畫面與選取並顯示原因。
 - **資料後置狀態**：整批不變。
 - **現有自動化覆蓋**：無。
 
-#### TC-ERR-TASK-017 空批次與重複 Task ID
-- **類型與優先級**：Error／P1；**測試層級**：API；**狀態**：Ready
+#### TC-ERR-TASK-017 空批次、重複 Task ID 與超過 10 筆
+- **類型與優先級**：Error／P0；**測試層級**：API、UI；**狀態**：Planned（GAP-007）
 - **對應需求**：US-2；API contract
 - **前置條件**：已登入。
-- **測試步驟**：送空 tasks；同一 taskId 兩次（相同或不同 rowVersion）。
-- **預期結果**：400 `validation_error` 或 `duplicate_task`；不更新任何資料。
+- **測試步驟**：1. 送空 tasks。2. 同一 taskId 兩次（相同或不同 rowVersion）。3. UI 勾選 11 筆。4. 繞過 UI 直接送 11 筆 API request。
+- **預期結果**：空集合回 400 `validation_error`；重複 ID 回 400 `duplicate_task`；UI 保留 11 筆選取但停用送出並提示上限；API 對 11 筆回 400 `validation_error`，不得截斷成前 10 筆。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：無；目前 UI 允許直接送出 11 筆，Backend 亦未拒絕。
 
 #### TC-ST-TASK-018 批次確認取消與偏好略過
 - **類型與優先級**：State／P1；**測試層級**：UI、E2E；**狀態**：Ready
@@ -672,7 +723,7 @@
 - **對應需求**：US-4；API resource scope
 - **前置條件**：留言屬 A Project/A Task。
 - **測試步驟**：用 B Project 或 B Task route 讀／改／刪該留言。
-- **預期結果**：不得洩漏或異動留言；依已授權 route scope 回 403 或 404，具體優先序見 GAP-008。
+- **預期結果**：不得洩漏或異動留言；對 route 的 Project scope 無權時一律先回 403，不因留言／Task 不存在改回 404；已授權 scope 內資源不存在才回 404。
 - **資料後置狀態**：不變。
 - **現有自動化覆蓋**：無。
 
@@ -816,13 +867,22 @@
 - **現有自動化覆蓋**：無。
 
 #### TC-SQL-007 重複 Email DB constraint
-- **類型與優先級**：Data integrity／P0；**測試層級**：SQL；**狀態**：Planned（GAP-010）
+- **類型與優先級**：Data integrity／P0；**測試層級**：SQL、API；**狀態**：Planned（GAP-010、OPEN-006）
 - **對應需求**：AUTH、DB
-- **前置條件**：新增 NormalizedEmail UNIQUE migration 後。
-- **測試步驟**：繞過 UserManager 並行插入相同 NormalizedEmail。
-- **預期結果**：DB 拒絕第二筆且應用映射為可理解衝突，而不是 500。
-- **資料後置狀態**：NormalizedEmail 唯一。
+- **前置條件**：已依 OPEN-006 決議新增 NormalizedEmail UNIQUE migration；準備含重複 normalized Email 與 NULL 的 migration 前資料集。
+- **測試步驟**：1. 驗證 migration 前置檢查可辨識既有重複資料。2. 依確認的清理／中止策略套用 migration。3. 繞過 UserManager 並行插入相同 NormalizedEmail。4. 以大小寫不同但正規化後相同的 Email 註冊。5. 依確認規則測 NULL。
+- **預期結果**：migration 不會靜默遺失／任意合併既有帳號；DB 拒絕第二筆相同非 NULL NormalizedEmail；大小寫正規化後不得重複；NULL 與 API 衝突結果完全依 OPEN-006 的固定契約驗收，不得回 500。
+- **資料後置狀態**：所有非 NULL NormalizedEmail 不重複；NULL 資料依 OPEN-006 決議處理。
 - **現有自動化覆蓋**：無。
+
+#### TC-SQL-008 Refresh Token replacement self-FK
+- **類型與優先級**：Data integrity／P0；**測試層級**：SQL、Service；**狀態**：Planned（GAP-011、OPEN-008）
+- **對應需求**：AUTH、DB；GAP-011
+- **前置條件**：已建立 `RefreshTokens.ReplacedByTokenId` nullable self-FK，並完成 OPEN-008 DeleteBehavior 決議。
+- **測試步驟**：1. 建立合法 A→B rotation chain。2. 嘗試寫入不存在的 replacement ID。3. 嘗試實體刪除仍被 A 參照的 B。4. 撤銷 token family 並檢查 chain。
+- **預期結果**：合法 chain 可保存；不存在 ID 被 FK 拒絕；實體刪除與關聯後置狀態符合 OPEN-008 的唯一決議；family 撤銷不破壞參照完整性。
+- **資料後置狀態**：只保留有效參照的 rotation chain；失敗操作完整 rollback。
+- **現有自動化覆蓋**：無；目前欄位只有應用層邏輯參照，尚無 DB FK。
 
 #### TC-F-API-001 OpenAPI、enum、路由與 Problem Details
 - **類型與優先級**：Contract／P0；**測試層級**：API；**狀態**：Ready
@@ -859,6 +919,15 @@
 - **預期結果**：health 200 代表應用存活；只允許設定 origin 且 credentials policy 正確；OpenAPI 只在 Development/Testing 或明確開啟時暴露。
 - **資料後置狀態**：不變。
 - **現有自動化覆蓋**：`ApiSurfaceTests` 僅在 Testing 讀 OpenAPI；health/CORS 未覆蓋。
+
+#### TC-SEC-API-005 Project scope 的 403 優先於資源 404
+- **類型與優先級**：Security／P0；**測試層級**：Service、API；**狀態**：Planned（GAP-008）
+- **對應需求**：API authorization；GAP-008
+- **前置條件**：準備對 Project A 無權及有權的帳號；Project／Task／Comment／Member 各準備存在與不存在 ID。
+- **測試步驟**：對所有 Project-scoped list/detail/create/update/delete endpoint 執行四格矩陣：無權＋存在、無權＋不存在、有權＋存在、有權＋不存在。
+- **預期結果**：無權＋存在與無權＋不存在皆先回 403 `forbidden`；有權＋存在依操作成功；有權＋不存在才回 404 `not_found`；兩種無權回應不洩漏資源存在性差異。
+- **資料後置狀態**：失敗請求不異動 Project、Task、Comment、Member、history 或 audit。
+- **現有自動化覆蓋**：無；目前各 Service 的授權／查詢順序不完全一致，批次 Task 仍可能先因不存在回 404。
 
 ### 4.8 UI、導覽、錯誤與可用性
 
@@ -938,20 +1007,20 @@
 
 | 需求 | 主要案例 | Happy path | Edge／Error | State／Concurrency | 狀態 |
 |---|---|---:|---:|---:|---|
-| AUTH | AUTH 系列 001–014 | ✓ | ✓ | ✓ | Ready；token 時效仍有 GAP-002 |
+| AUTH | AUTH 系列 001–017 | ✓ | ✓ | ✓ | 部分；Token 重寄失效 Planned，重放語意與時效待確認 |
 | US-1 | TASK 系列 001–005 | ✓ | ✓ | ✓ | Ready |
-| US-2 | TASK 系列 006–018、TC-F-PREF-001 | ✓ | ✓ | ✓ | Ready |
+| US-2 | TASK 系列 006–018、TC-F-PREF-001 | ✓ | ✓ | ✓ | 部分；批次上限與 403 優先序 Planned |
 | US-3 | TC-F-AUTH-014、TC-F-TASK-006 | ✓ | ✓ | ✓ | Ready |
 | US-4 | TC-ST-TASK-003、TC-ERR-TASK-005、CMT 系列 001–008 | ✓ | ✓ | ✓ | Ready |
 | US-5 | REM 系列 001–009 | ✓ | ✓ | ✓ | Planned |
-| US-6 | TC-F-TASK-008、TC-ERR-TASK-009 | ✓ | ✓ | ✓ | Ready |
+| US-6 | TC-F-TASK-008、TC-ERR-TASK-009 | ✓ | ✓ | ✓ | 部分；Description 契約對齊 Planned |
 | US-7 | TASK 系列 010–014 | ✓ | ✓ | ✓ | Ready |
 | US-8 | TC-F-TASK-019、TC-ST-TASK-020、TC-SQL-003 | ✓ | ✓ | ✓ | Ready |
-| FLOW-PRJ | PRJ 系列 001–007 | ✓ | ✓ | ✓ | 部分；欄位邊界 Planned |
+| FLOW-PRJ | PRJ 系列 001–008 | ✓ | ✓ | ✓ | 部分；欄位邊界與 Owner 驗證 Planned |
 | FLOW-MEMBER | MEMBER 系列 001–007 | ✓ | ✓ | ✓ | Ready |
 | FLOW-USER | USER 系列 001–008 | ✓ | ✓ | ✓ | Ready；現行版本不含個資編輯 |
 | PREF | PREF 系列 001–002 | ✓ | ✓ | ✓ | Ready |
-| API／DB | SQL 系列 001–007、API 系列 001–004 | ✓ | ✓ | ✓ | 部分；Email UNIQUE Planned |
+| API／DB | SQL 系列 001–008、API 系列 001–005 | ✓ | ✓ | ✓ | 部分；403 優先序、Email UNIQUE 與 Refresh Token self-FK Planned |
 | UI／UIMock | UI 系列 001–008 | ✓ | ✓ | ✓ | Ready；舊 PNG 差異依 `UIMock/README.md` |
 
 ## 6. 自動化覆蓋摘要與建議順序
