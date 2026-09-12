@@ -2,7 +2,7 @@
 
 ## 1. 文件資訊
 
-- **產出日期**：2026-09-07；**最後更新**：2026-09-12
+- **產出日期**：2026-09-07；**最後更新**：2026-09-13
 - **需求來源**：`UserStory.md`、`Flowchart/`、`Schema.md`、`StaticData.md`、`UIMock/`、Backend API／EF Core migrations／現有測試、Frontend routes／views／services／現有測試
 - **測試範圍**：帳號與驗證、授權與 Session、使用者管理、偏好、專案與成員、Task 清單與異動、留言、到期提醒、SQL 完整性、UI／E2E
 - **狀態定義**：`Ready` 表示已有可測介面；`Planned` 表示需求已定義但功能尚未實作，或因契約缺口尚不能執行。
@@ -20,11 +20,11 @@
 | CON-004 | Project Role 基數 | 舊 Schema／草圖／流程看似單一角色 | 成員可有多個 Project Roles；修改時完整取代且至少一個 | 已更新 User Story、Flowchart、Schema 與 UI 草圖契約 |
 | CON-005 | Task 清單批次刪除 | 舊草圖暗示 checkbox 支援批次刪除 | checkbox 只供批次改狀態；刪除為後台每列單筆軟刪除 | 已更新 `UIMock/README.md` |
 | CON-006 | 批次目標狀態初始值 | User Story 要求先選狀態，UI 預設 `InProgress` | 保留 `InProgress` 預設值；只在未選 Task 時停用確認 | 已更新 User Story、Flowchart 與 UI 草圖契約 |
-| CON-007 | Project 表單限制 | Frontend 與 Backend／DB 不一致 | Name trim 後 1–200 字；Description 選填且最多 4000 字 | 規格已決議；Frontend 欄位限制及 Backend 邊界驗證尚待對齊 |
-| CON-008 | Task Description 必填 | Frontend 必填，Backend／DB 允許空值 | Description 選填；有值時 trim 後最多 8000 字 | 規格已決議；Frontend 必填限制及 Backend 8000 字邊界驗證尚待對齊 |
+| CON-007 | Project 表單限制 | Frontend 與 Backend／DB 不一致 | Name trim 後 1–200 字；Description 選填且最多 4000 字 | Frontend 欄位限制已對齊；Backend 邊界驗證尚待對齊 |
+| CON-008 | Task Description 必填 | Frontend 必填，Backend／DB 允許空值 | Description 選填；有值時 trim 後最多 8000 字 | Frontend 必填與長度限制已對齊；Backend 8000 字邊界驗證尚待對齊 |
 | CON-009 | 使用者設定範圍 | 舊草圖將個資、系統角色與專案角色放在同頁 | Settings 只管理語言與批次確認偏好；系統角色／啟用狀態在 User Detail；Project Roles 在 Project Detail | 已更新 User Story、C4 與 UI 草圖契約 |
 | CON-010 | Schema 主鍵與資料模型 | 舊 Schema 為字串主鍵與明文式 Password | 以 EF migrations／model snapshot 為正式來源，使用 Identity GUID、`PasswordHash`、獨立關聯與 rowversion | `Schema.md` 已依現行模型改寫 |
-| CON-011 | C4 Email 範圍 | C4 只繪出驗證信 | 到期提醒需包含 Scanner、Sender、唯一寄送紀錄、retry 與告警，未完成前一律標為 Planned | User Story、提醒 Flowchart、Backlog 與彙整版 C4 已對齊；獨立 Level 1／2／3B C4 圖仍待同步，營運參數、Backend、Schema 與自動化測試尚待完成 |
+| CON-011 | C4 Email 範圍 | C4 只繪出驗證信 | 到期提醒需包含 Scanner、Sender、唯一寄送紀錄、retry 與告警，未完成前一律標為 Planned | User Story、提醒 Flowchart、Backlog、彙整版與五張獨立 C4 圖已對齊；營運參數、Backend、Schema 與自動化測試尚待完成 |
 | CON-012 | Project 清單搜尋方式 | 舊草圖為多欄位查詢與 Owner 篩選 | 單一 search 查 Code／Name／Description，另有 status；無 Owner filter | 已更新 User Story 與 UI 草圖契約 |
 | CON-013 | Task 詳情操作型態 | 舊草圖在詳情頁直接 Confirm／Cancel | Task Detail 為詳情與留言；修改導向 `/admin/projects/{projectId}/task-items/{taskId}/edit` | 已更新 User Story、Flowchart、C4 與 UI 草圖契約 |
 
@@ -46,7 +46,7 @@
 | GAP-012 | Task 到期提醒依 Project 必填的 IANA `TimeZoneId`，每天 Project 當地時間 08:00 執行；同一 Project 當地日期只執行一次，當日服務恢復即補跑。初次失敗後最多重試 3 次，間隔 5、15、60 分鐘；最終告警寫 DB 與結構化 log，本期不做管理 UI。 | Project 補 `TimeZoneId`；既有資料由部署必填的 migration 預設 IANA timezone 回填，新 Project 必須明確指定；實作 Scanner、Sender、claim、retry、告警與測試。 | 多時區 08:00、DST 日期冪等、當日補跑、3 次重試、DB／log 告警、去重、多 worker、Task 完成與帳號失效。 | 已決議，待實作 |
 | GAP-013 | Backend 核心 Service/API 授權、交易與並行路徑必須補自動化測試。 | 優先補角色矩陣、批次 rollback、rowversion、Owner、成員角色、token rotation、軟刪除及 audit/history。 | 使用實際 SQL Server 驗證 relational constraint、transaction 與 concurrency；不得以 EF InMemory 取代。 | 已決議，待實作 |
 | GAP-014 | Frontend 必須補 Task 清單、批次、留言、角色與主要錯誤流程的 Component／E2E 測試。 | 補 URL query／返回狀態、checkbox、10 筆上限、偏好、留言、角色複選及 403/409/422 UX。 | Vitest 驗證元件行為；Playwright 驗證前後端整合，不只檢查元素存在。 | 已決議，待實作 |
-| GAP-015 | Frontend `AGENTS.md` 必須更新為目前已完成 Vue 3 初始化且已串接 Backend 的現況。 | 移除「尚未建立前端專案」敘述，保留現行 Vue 3、TypeScript、Vite、Pinia、Router、Vitest 與 Playwright 規範。 | 文件敘述與 `package.json`、目錄、route、service 及測試工具一致。 | 已決議，待文件更新 |
+| GAP-015 | Frontend `AGENTS.md` 必須更新為目前已完成 Vue 3 初始化且已串接 Backend 的現況。 | 移除「尚未建立前端專案」敘述，保留現行 Vue 3、TypeScript、Vite、Pinia、Router、Vitest 與 Playwright 規範。 | 文件敘述與 `package.json`、目錄、route、service 及測試工具一致。 | 已完成 |
 
 ### 2.3 已確認的 OPEN 決議
 
@@ -452,7 +452,7 @@
 - **測試步驟**：測名稱 trim 後 0/1/2/120/121/200/201 字及 description 空值/4000/4001 字。
 - **預期結果**：名稱 1–200 字通過，0 或 201 字拒絕；description 空值或最多 4000 字通過，4001 字拒絕；前後端界線一致且回欄位錯誤而非 DB 500。
 - **資料後置狀態**：拒絕值不建立／更新。
-- **現有自動化覆蓋**：無；Frontend 現況仍為名稱 2–120 字且 Description 必填。
+- **現有自動化覆蓋**：部分：Frontend 已有元件測試鎖定名稱 1–200 字與 Description 選填／4000 字上限；Backend 邊界驗證與 API／SQL 測試尚未完成。
 
 #### TC-ST-PRJ-006 修改 Project 並增加版本
 - **類型與優先級**：State／P0；**測試層級**：API、SQL、UI；**狀態**：Planned（GAP-006）
@@ -670,7 +670,7 @@
 - **測試步驟**：測空標題、301 字標題、不存在／其他 Project assignee、startAt>deadline；另送 description 空值、純空白、8000 與 8001 字。
 - **預期結果**：非法資料回 400/422 對應 code；依正式契約，空 description 可接受，有值時 trim 後最多 8000 字；失敗不產生 Task/history/audit 或消耗編號。
 - **資料後置狀態**：失敗個案不變。
-- **現有自動化覆蓋**：無；Frontend 仍要求 Description，Backend 尚未在寫入 DB 前把 8001 字映射為欄位驗證錯誤。
+- **現有自動化覆蓋**：部分：Frontend 已有元件測試鎖定 Description 選填與 8000 字上限；Backend 尚未在寫入 DB 前把 8001 字映射為欄位驗證錯誤。
 
 #### TC-F-TASK-010 後台完整修改 Task
 - **類型與優先級**：Functional／P0；**測試層級**：API、SQL、UI；**狀態**：Ready
@@ -787,7 +787,7 @@
 - **測試步驟**：1. 完整 PUT 分別送空白／301 字標題、description 空值／純空白／8000／8001 字、三種無效 assignee，以及 startAt 晚於 deadline。2. 被指派者 PATCH deadline 為等於及早於既有 startAt。3. 每次失敗後查 Task、history、audit。
 - **預期結果**：合法邊界可保存；空白／超長欄位回 400 `validation_error`，無效 assignee 回 422 `invalid_assignee`，不合法日期回 422 `invalid_deadline`；被指派者 deadline 等於 startAt 可成功，早於 startAt 被拒絕；失敗時 UI 保留輸入，Task、history、audit 均不變。
 - **資料後置狀態**：只有合法邊界案例更新 Task 並產生對應追蹤；失敗案例完全不變。
-- **現有自動化覆蓋**：無；Backend 共用標題／指派者／日期驗證，但尚未在寫入 DB 前驗證 Description 8000 字上限，Frontend 仍把 Description 當必填。
+- **現有自動化覆蓋**：部分：Frontend 已有元件測試鎖定 Description 選填與 8000 字上限；Backend 共用標題／指派者／日期驗證，但尚未在寫入 DB 前驗證 Description 8000 字上限。
 
 ### 4.5 Task 留言
 
