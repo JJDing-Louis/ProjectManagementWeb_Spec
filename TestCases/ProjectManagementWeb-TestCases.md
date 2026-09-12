@@ -33,35 +33,45 @@
 | ID | 已確認規則 | 待完成工作 | 驗收重點 | 狀態 |
 |---|---|---|---|---|
 | GAP-001 | 顯示名稱必填，trim 後為 1–100 字。 | Frontend 加上相同必填、trim 與 `maxlength=100` 規則；Backend 維持相同邊界與欄位錯誤。 | 0/1/100/101 字與純空白；UI/API 接受及拒絕界線一致。 | 已決議，待實作對齊 |
-| GAP-002 | 每次重新寄送 Email 驗證信後，先前發出的驗證 Token 必須立即失效。 | Backend 建立可辨識最新版 Token 的版本／nonce 或等效機制；最新版 Token 是否只能使用一次另待確認。 | Token A 重寄取得 Token B 後，A 必須失敗且 B 必須有效；有效期、重寄頻率與重放語意另列 OPEN。 | 部分決議，待補其餘安全契約 |
-| GAP-003 | 登入失敗不鎖定帳號，不以失敗次數變更帳號啟用狀態。 | 現行 Backend 已使用不累計鎖定的密碼檢查；需補自動化回歸測試，其他流量防護另待確認。 | 連續失敗後，正確密碼仍可登入；停用帳號仍須拒絕。 | 規則與現行實作已對齊；待補測試 |
+| GAP-002 | Email 驗證 Token 自簽發起有效 3 分鐘；重寄冷卻 60 秒，且每帳號及每 IP 於滾動 60 分鐘內最多 5 次。帳號／冷卻受限仍回 200 一般訊息，IP 濫用回 `429 rate_limited`；不存在帳號仍計入 IP。重寄成功後舊 Token 立即失效；成功使用過的 Token 再用必須失敗。 | Backend 建立可辨識最新版 Token、簽發時間、已使用狀態與帳號綁定的版本／nonce 或等效機制，並加入帳號及 IP 重寄限制。 | 驗證 3 分鐘邊界、60 秒冷卻、滾動 60 分鐘第 5／6 次、兩類 response、重寄前後 Token、重放與跨帳號攻擊；受限請求不得使現有 Token 失效。 | 已決議，待實作 |
+| GAP-003 | 登入失敗不鎖定帳號；同一帳號或 IP 在滾動 15 分鐘內第 5 次失敗起回 `429 rate_limited`，本期不做 CAPTCHA，並保留安全稽核。只信任 allowlist reverse proxy 提供的 forwarded IP；多執行個體共用限流計數。 | 保留現行不累計帳號鎖定的密碼檢查；新增帳號與 IP rate limit、可信 proxy 設定、共享計數、一般化錯誤與安全稽核。 | 第 1–4 次失敗為 401；第 5 次及限制視窗內後續請求為 429；偽造 forwarded header 無效；跨 instance 仍共用門檻；視窗結束後正確密碼可登入。 | 部分已對齊；rate limit 與稽核待實作 |
 | GAP-004 | Project 的 `Pending／Active／Completed／Archived` 目前允許任意互轉。 | User Story、API contract、Domain 與測試統一採無狀態轉換限制。 | 覆蓋 4×4 組合，包含更新為相同狀態。 | Backend 已對齊；待同步文件與補測試 |
 | GAP-005 | Task 的 `Pending／InProgress／Blocked／Completed` 目前允許任意互轉。 | Flowchart 移除「可能因狀態轉換無效而拒絕」的暗示；Backend 與測試維持 4×4。 | 單筆、被指派者更新及批次更新皆覆蓋 4×4，包含相同狀態。 | Backend 已對齊；待同步文件與補測試 |
-| GAP-006 | Project Owner 必須是啟用且 Email 已驗證的有效帳號；修改 Owner 時還必須已是該 Project 成員。 | Backend 建立與修改 Project 都檢查 `IsEnabled=true`、`EmailConfirmed=true`；Frontend Owner 候選清單套用相同條件。 | 未驗證、停用、不存在及修改時非成員皆拒絕，且不建立 Project／不移交 Owner。 | 已決議，待實作 |
+| GAP-006 | Project Owner 必須是已啟用、Email 已驗證，且系統角色恰為 `Administrator` 的帳號；`Admin`、`User`、`Viewer` 均不得擔任。修改 Owner 時還必須已是該 Project 成員。 | Backend 建立與修改 Project 都檢查 `IsEnabled=true`、`EmailConfirmed=true`、system role=`Administrator`；Frontend Owner 候選清單套用相同條件。 | 不存在、停用、未驗證、非 Administrator，以及修改時非成員皆拒絕，且不建立 Project／不移交 Owner。 | 已決議，待實作 |
 | GAP-007 | UI checkbox 可選超過 10 筆，但單次批次狀態更新最多只能送出 10 筆。 | UI 選取超過 10 筆時保留選取，但停用送出並提示上限；Backend 對 11 筆以上回 `400 validation_error`，不得只取前 10 筆。 | 測 0/1/10/11 筆；11 筆時整批不更新，10 筆仍維持單一交易。 | 已決議，待實作 |
 | GAP-008 | 同時符合「無權限」與「資源不存在」時優先回 `403`，避免洩漏資源存在性。 | 所有 Project-scoped Service/API 統一先檢查功能與資料範圍授權，再在已授權範圍內判斷 `404`。 | 無權＋存在、無權＋不存在皆為 403；有權＋不存在才是 404。 | 已決議，待全面盤點 |
-| GAP-009 | `Projects.DeletedAt` 必須保留，專門表示 Project 軟刪除；一般查詢預設排除已軟刪除資料。 | 現行 Entity、Schema 與 query filter 已保留；若要提供刪除操作，必須另補 User Story、權限、關聯資料與 API 契約。 | 設值後一般 list/detail 不可讀取；資料列及需要保留的歷史／稽核不可被實體刪除。 | 欄位與 query filter 已對齊；刪除操作範圍待確認 |
-| GAP-010 | `Accounts.NormalizedEmail` 必須在 Database 層唯一，不允許重複。 | 新增 UNIQUE index migration，套用前先盤點並處理既有重複資料；欄位 nullability、index filter 與衝突回應契約確認後再實作。 | 大小寫不同但正規化後相同的 Email、並行註冊、NULL 規則與 migration 前置資料檢查。 | 唯一性已決議；其餘細節待確認 |
-| GAP-011 | `RefreshTokens.ReplacedByTokenId` 必須補上 nullable self-referencing Foreign Key。 | 補 EF mapping 與 migration；FK 的刪除行為確認後再定案，不預先假設 Restrict／NoAction。 | 不存在的 replacement ID 被 DB 拒絕；合法 rotation chain 可保存；刪除行為符合明確決議。 | FK 已決議；DeleteBehavior 待確認 |
-| GAP-012 | Task 到期提醒須依既有 User Story、Flowchart、C4 與 Backlog 完整實作。 | 補提醒資料表與唯一限制、每日 Scanner、單封 Sender、claim、retry、告警、設定與自動化測試；未完成前維持 Planned。 | 同 Task／收件人／提醒日期不重複；多 worker、重跑、Task 完成、帳號失效與寄送失敗皆符合規格。 | 已決議，待確認完整契約後實作 |
+| GAP-009 | `Projects.DeletedAt` 保留作為軟刪除；只有 `Administrator` 與 `Admin` 可刪除。刪除必須帶最新 rowVersion，衝突回 409 `concurrency_conflict`；記錄 `DeletedByAccountId` 與 AuditLog，FK 採 NoAction。本期不提供還原或永久刪除，子資料從一般查詢隱藏但不實體刪除。 | 補 Project delete User Story、API、UI、`DeletedByAccountId` nullable FK、rowVersion、權限與關聯查詢契約；現行 `DeletedAt` 與 query filter 保留。 | 允許角色、403 優先序、404、409、刪除者、時間、稽核、無還原／永久刪除入口，以及子資料保存。 | 已決議，待實作 |
+| GAP-010 | `Accounts.NormalizedEmail` 改為 DB `NOT NULL`，並建立不帶 filter 的 UNIQUE index；重複時 API 回 `409 duplicate_email` 且包含 `errors.email`。Migration 發現 NULL／重複髒資料時 fail-fast，由人工修正後重跑，不自動合併或刪除帳號。 | 增加 migration 前置檢查，再調整 nullability 與 UNIQUE index；捕捉並行 UNIQUE 違規並映射固定 Problem Details。 | 大小寫正規化、並行註冊、NULL、髒資料 fail-fast、人工修正後重跑與固定 409 契約。 | 已決議，待 migration 與測試 |
+| GAP-011 | `RefreshTokens.ReplacedByTokenId` 補上 nullable self-referencing Foreign Key，並設定 `.OnDelete(DeleteBehavior.NoAction)`。 | 補 EF mapping 與 migration；正常生命週期只撤銷 Token，不實體刪除；歷史清理由獨立 retention 流程處理。 | 不存在的 replacement ID 被 DB 拒絕；合法 rotation chain 可保存；被參照 Token 不得因 cascade 消失。 | 已決議，待 migration 與測試 |
+| GAP-012 | Task 到期提醒依 Project 必填的 IANA `TimeZoneId`，每天 Project 當地時間 08:00 執行；同一 Project 當地日期只執行一次，當日服務恢復即補跑。初次失敗後最多重試 3 次，間隔 5、15、60 分鐘；最終告警寫 DB 與結構化 log，本期不做管理 UI。 | Project 補 `TimeZoneId`；既有資料由部署必填的 migration 預設 IANA timezone 回填，新 Project 必須明確指定；實作 Scanner、Sender、claim、retry、告警與測試。 | 多時區 08:00、DST 日期冪等、當日補跑、3 次重試、DB／log 告警、去重、多 worker、Task 完成與帳號失效。 | 已決議，待實作 |
 | GAP-013 | Backend 核心 Service/API 授權、交易與並行路徑必須補自動化測試。 | 優先補角色矩陣、批次 rollback、rowversion、Owner、成員角色、token rotation、軟刪除及 audit/history。 | 使用實際 SQL Server 驗證 relational constraint、transaction 與 concurrency；不得以 EF InMemory 取代。 | 已決議，待實作 |
 | GAP-014 | Frontend 必須補 Task 清單、批次、留言、角色與主要錯誤流程的 Component／E2E 測試。 | 補 URL query／返回狀態、checkbox、10 筆上限、偏好、留言、角色複選及 403/409/422 UX。 | Vitest 驗證元件行為；Playwright 驗證前後端整合，不只檢查元素存在。 | 已決議，待實作 |
 | GAP-015 | Frontend `AGENTS.md` 必須更新為目前已完成 Vue 3 初始化且已串接 Backend 的現況。 | 移除「尚未建立前端專案」敘述，保留現行 Vue 3、TypeScript、Vite、Pinia、Router、Vitest 與 Playwright 規範。 | 文件敘述與 `package.json`、目錄、route、service 及測試工具一致。 | 已決議，待文件更新 |
 
-### 2.3 實作前仍需確認的不足
+### 2.3 已確認的 OPEN 決議
 
-下列項目尚無法從目前決議得到唯一、可驗收的規則；確認前不得自行實作：
+| ID | 最終決議 |
+|---|---|
+| OPEN-001 | Email 驗證 Token 有效期精確為 3 分鐘；重寄冷卻 60 秒，每帳號及每 IP 每小時最多 5 次。 |
+| OPEN-002 | 登入採帳號與 IP rate limit；滾動 15 分鐘內第 5 次失敗起回 `429 rate_limited`，不鎖帳號，本期不做 CAPTCHA，需保留安全稽核。 |
+| OPEN-003 | 只有已啟用、Email 已驗證且系統角色恰為 `Administrator` 的帳號可擔任 Project Owner；`Admin` 不在允許範圍。 |
+| OPEN-004 | 本期提供 Project 軟刪除；`Administrator` 與 `Admin` 可刪除，記錄 `DeletedByAccountId` 與 AuditLog，不提供還原；子資料隱藏但不實體刪除。 |
+| OPEN-005 | 每個 Project 使用必填 IANA `TimeZoneId`；依當地時間每日 08:00 執行提醒；失敗後最多重試 3 次，間隔 5、15、60 分鐘。 |
+| OPEN-006 | `NormalizedEmail` 改為 `NOT NULL` 並建立無 filter UNIQUE index；重複回 `409 duplicate_email` 與 `errors.email`。 |
+| OPEN-007 | 已成功使用的 Email 驗證 Token 再次使用回 `400 invalid_email_token`；跨帳號失敗不得消耗原 Token。 |
+| OPEN-008 | `RefreshTokens.ReplacedByTokenId` self-FK 採 `.OnDelete(DeleteBehavior.NoAction)`。 |
 
-| ID | 尚缺決策 | 影響 |
-|---|---|---|
-| OPEN-001 | Email 驗證 Token 的有效期間，以及重新寄送的冷卻時間、單位時間上限。 | GAP-002 的過期、濫用防護與排程測試仍沒有 pass/fail 數字。 |
-| OPEN-002 | 「登入失敗不鎖定」之外，是否需要 IP／帳號層 rate limit、CAPTCHA 或安全稽核門檻。 | GAP-003 已能測不鎖帳號，但仍無法驗收暴力嘗試流量防護。 |
-| OPEN-003 | Project Owner 是否允許由已啟用、已驗證的 `Viewer` 擔任。 | GAP-006 的候選清單與 Backend role eligibility 尚未完整。 |
-| OPEN-004 | Project 軟刪除是否要在本期提供 API／UI、允許哪些角色執行、是否可還原，以及 Task／Member 的可見性與後續操作。 | GAP-009 目前只確認欄位與 query filter，尚不能建立完整刪除 E2E 驗收。 |
-| OPEN-005 | Task 到期提醒採用的產品時區、每日執行時間、retry 間隔／退避策略、告警輸出位置，以及是否需要管理查詢介面。 | CON-011／GAP-012 的架構方向一致，但仍不足以安全完成排程與營運驗收。 |
-| OPEN-006 | `NormalizedEmail` 是否改為 DB `NOT NULL`，或保留 nullable 並建立 filtered UNIQUE index；並行重複時 API 應回哪個固定 HTTP status、`code` 與欄位錯誤。 | GAP-010 的 migration 形狀與 API／UI 可驗收結果尚不能唯一決定。 |
-| OPEN-007 | 最新一枚 Email 驗證 Token 成功使用後，再次使用同一 Token 應回成功（冪等）或失敗（一次性）；跨帳號攻擊是否消耗原 Token。 | GAP-002 目前只確認「重寄使舊 Token 失效」，尚不能把重放語意當成已決議。 |
-| OPEN-008 | `RefreshTokens.ReplacedByTokenId` self-FK 的 DeleteBehavior 採 Restrict／NoAction，或允許其他明確策略。 | GAP-011 的 FK 必要性已確認，但 migration 與實體刪除測試仍需要唯一規則。 |
+### 2.4 已確認的補充決議
+
+| ID | 最終決議 |
+|---|---|
+| OPEN-009 | `DeletedByAccountId` nullable FK 採 NoAction；本期不提供 Project 永久刪除，資料持續保留。 |
+| OPEN-010 | 以 Project 當地日期作為提醒冪等鍵；DST 不得造成同一日期重複或遺漏。08:00 停機時於同一當地日恢復後補跑；最終 Failed 告警寫入 DB 與結構化 log，本期不提供管理 UI。 |
+| OPEN-011 | 只信任 allowlist reverse proxy 的 forwarded IP；未經信任來源的 header 不採用。多執行個體必須使用共享 rate-limit store。 |
+| OPEN-012 | Migration 由部署設定提供必填預設 IANA timezone 回填既有 Project；新 Project 不採系統預設值，必須明確指定 TimeZoneId。 |
+| OPEN-013 | Email 重寄上限採滾動 60 分鐘；帳號／60 秒冷卻限制回 200 一般訊息，IP 濫用回 `429 rate_limited`；不存在帳號仍計入 IP。 |
+| OPEN-014 | Project 軟刪除必須帶最新 rowVersion；stale rowVersion 回 409 `concurrency_conflict`。 |
+| OPEN-015 | NormalizedEmail migration 發現 NULL／重複資料時 fail-fast，由人工修正後重跑；不得自動合併或刪除帳號。 |
 
 ## 3. 需求代碼
 
@@ -171,13 +181,13 @@
 - **現有自動化覆蓋**：無；`VerifyEmailView` 僅顯示此語意。
 
 #### TC-ERR-AUTH-010 無效／變造／過期 Email token
-- **類型與優先級**：Error／P0；**測試層級**：API、UI；**狀態**：Ready（明確過期時間仍有 GAP-002）
+- **類型與優先級**：Error／P0；**測試層級**：Unit、API、UI；**狀態**：Planned（GAP-002）
 - **對應需求**：AUTH；Email 驗證 Flowchart
-- **前置條件**：準備亂碼、其他帳號 token 與已過期 token。
-- **測試步驟**：逐一呼叫 confirm。
-- **預期結果**：400 `invalid_email_token`，顯示不洩漏細節的失效訊息，帳號維持未驗證並提供重寄路徑。
+- **前置條件**：固定 TimeProvider；準備亂碼、變造 Token 與簽發時間已知的有效 Token。
+- **測試步驟**：分別在簽發後 2:59.999、3:00.000，以及超過 3 分鐘時呼叫 confirm；另送亂碼與變造 Token。
+- **預期結果**：3 分鐘以前有效；自簽發滿 3 分鐘起，以及亂碼／變造 Token 均回 400 `invalid_email_token`，顯示不洩漏細節的失效訊息並提供重寄路徑。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：無；目前尚未落實精確 3 分鐘契約。
 
 #### TC-F-AUTH-011 重寄驗證信不洩漏帳號存在性
 - **類型與優先級**：Security／P1；**測試層級**：API、UI；**狀態**：Ready
@@ -225,22 +235,40 @@
 - **現有自動化覆蓋**：無；目前 Identity Email Token 未綁定「最新一次重寄」版本，因此功能尚未實作。
 
 #### TC-ERR-AUTH-016 已使用 Email 驗證 Token 的重放語意
-- **類型與優先級**：Security／P0；**測試層級**：Service、API、SQL；**狀態**：Planned（待 OPEN-007 決議）
-- **對應需求**：AUTH；OPEN-007（提案，尚未定案）
+- **類型與優先級**：Security／P0；**測試層級**：Service、API、SQL；**狀態**：Planned（GAP-002、OPEN-007）
+- **對應需求**：AUTH；GAP-002；OPEN-007
 - **前置條件**：未驗證啟用帳號持有目前最新版 Token。
 - **測試步驟**：1. 使用 Token 完成驗證。2. 以相同 Token 再次呼叫驗證端點。
-- **預期結果**：第一次成功；第二次的成功／失敗與固定 error code 需依 OPEN-007 決議填入，確認前不得實作此斷言。
+- **預期結果**：第一次成功；第二次回 400 `invalid_email_token`，不得視為冪等成功，且不洩漏 Token 已使用的細節。
 - **資料後置狀態**：帳號只產生一次有效驗證狀態轉換，重放不產生額外狀態或稽核異動。
-- **現有自動化覆蓋**：無；需求尚待確認。
+- **現有自動化覆蓋**：無；一次性使用狀態尚未實作。
 
 #### TC-ERR-AUTH-017 Email 驗證 Token 不可跨帳號使用
-- **類型與優先級**：Security／P0；**測試層級**：Service、API；**狀態**：Ready
-- **對應需求**：AUTH；Email 驗證 Token 的帳號綁定安全契約
+- **類型與優先級**：Security／P0；**測試層級**：Service、API；**狀態**：Planned（GAP-002、OPEN-007）
+- **對應需求**：AUTH；Email 驗證 Token 的帳號綁定安全契約；OPEN-007
 - **前置條件**：未驗證帳號 A、B；Token A 為 A 的最新版 Token。
-- **測試步驟**：以帳號 B 的 accountId 搭配 Token A 呼叫驗證端點。
-- **預期結果**：回 400 `invalid_email_token`，不揭露 Token 原本屬於哪個帳號。
-- **資料後置狀態**：帳號 A、B 均維持未驗證；本案例不斷言攻擊請求後 Token A 的可用性，該語意另由 OPEN-007 決議。
-- **現有自動化覆蓋**：無。
+- **測試步驟**：1. 以帳號 B 的 accountId 搭配 Token A 呼叫驗證端點。2. 再由帳號 A 使用 Token A。
+- **預期結果**：跨帳號請求回 400 `invalid_email_token` 且不揭露 Token 所屬帳號；攻擊請求不消耗 Token A，帳號 A 隨後仍可在 3 分鐘內成功驗證。
+- **資料後置狀態**：帳號 B 維持未驗證；帳號 A 只因自己的合法請求完成驗證。
+- **現有自動化覆蓋**：無；跨帳號失敗不消耗 Token 的狀態追蹤尚未實作。
+
+#### TC-ERR-AUTH-018 重寄驗證信冷卻與每小時上限
+- **類型與優先級**：Security／P0；**測試層級**：Service、API；**狀態**：Planned（GAP-002、OPEN-001、OPEN-013）
+- **對應需求**：AUTH；GAP-002；OPEN-001；OPEN-013
+- **前置條件**：固定 TimeProvider；未驗證啟用帳號；可辨識相同／不同 IP。
+- **測試步驟**：1. 首次重寄。2. 在 59.999 秒及 60 秒重寄。3. 分別以相同帳號／不同 IP、不同帳號／相同 IP 累計滾動 60 分鐘內第 5 與第 6 次。4. 以不存在帳號累計 IP 次數。5. 視窗結束後再重寄。
+- **預期結果**：帳號或冷卻受限時仍回 200 一般訊息；滿 60 秒可進入頻率判斷；每帳號第 6 次回一般 200 但不寄信，每 IP 第 6 次回 429 `rate_limited`；不存在帳號仍累計 IP 且不洩漏存在性；滾動視窗結束後可重寄。
+- **資料後置狀態**：只有允許的請求建立新 Token／EmailMessages；被限制請求不建立 Token、不使現有 Token 失效。
+- **現有自動化覆蓋**：無；冷卻與雙維度限制尚未實作。
+
+#### TC-SEC-AUTH-019 登入失敗 rate limit、不鎖帳號與安全稽核
+- **類型與優先級**：Security／P0；**測試層級**：Service、API、SQL；**狀態**：Planned（GAP-003、OPEN-002、OPEN-011）
+- **對應需求**：AUTH；GAP-003；OPEN-002
+- **前置條件**：固定 TimeProvider；有效啟用帳號；設定 allowlist reverse proxy，並準備兩個共用 rate-limit store 的應用執行個體。
+- **測試步驟**：以同帳號／不同 IP 及不同帳號／同 IP 分別在滾動 15 分鐘內送出 5 次錯誤密碼；跨兩個執行個體累計；再送第 6 次與正確密碼；另偽造非可信來源的 forwarded IP；時間推進超過視窗後登入並檢查稽核。
+- **預期結果**：兩個維度及跨 instance 都能啟動同一限制；只採信 allowlist proxy 的 forwarded IP；第 1–4 次失敗回 401，第 5 次及限制視窗內後續請求回 429 `rate_limited`；不顯示 CAPTCHA、不鎖定帳號；視窗結束後可登入；稽核不記錄密碼／Token。
+- **資料後置狀態**：帳號狀態不變；只有最後成功登入建立 refresh token；保留不含敏感資料的安全稽核與 rate-limit 計數。
+- **現有自動化覆蓋**：無；rate limit 與登入安全稽核尚未實作。
 
 ### 4.2 授權、角色、使用者與偏好
 
@@ -355,19 +383,19 @@
 - **現有自動化覆蓋**：無。
 
 #### TC-F-PRJ-003 建立 Project 與自動 Owner membership
-- **類型與優先級**：Functional／P0；**測試層級**：API、SQL、E2E；**狀態**：Planned（GAP-006）
+- **類型與優先級**：Functional／P0；**測試層級**：API、SQL、E2E；**狀態**：Planned（GAP-006、OPEN-005）
 - **對應需求**：FLOW-PRJ；API Project contract
-- **前置條件**：具 projects.create；Owner 帳號啟用且 Email 已驗證。
-- **測試步驟**：建立 Project，檢查 response、Projects、ProjectMembers、ProjectMemberRoles、AuditLogs。
-- **預期結果**：201；狀態 Pending、versionNumber=1；產生 `PRJ-YYYYMMDD######`；已驗證 Owner 自動成為 member 且具 ProjectManager；建立稽核。
+- **前置條件**：具 projects.create；Owner 帳號啟用、Email 已驗證且系統角色為 Administrator；提供有效 IANA TimeZoneId。
+- **測試步驟**：建立 Project，檢查 response、Projects、ProjectMembers、ProjectMemberRoles、AuditLogs 與 TimeZoneId。
+- **預期結果**：201；狀態 Pending、versionNumber=1；產生 `PRJ-YYYYMMDD######`；Owner 自動成為 member 且具 ProjectManager；保存 IANA TimeZoneId 並建立稽核。
 - **資料後置狀態**：Project 與 Owner 關聯完整。
-- **現有自動化覆蓋**：部分：`app.spec.ts` 測 Admin 建立與 code 格式；編號另有 SQL tests；Backend 目前只檢查 Owner 啟用狀態，尚未檢查 Email 驗證。
+- **現有自動化覆蓋**：部分：`app.spec.ts` 測 Admin 建立與 code 格式；編號另有 SQL tests；Backend 目前只檢查 Owner 啟用狀態，尚未檢查 Email 驗證與 Administrator role，Project 也沒有 TimeZoneId。
 
-#### TC-ERR-PRJ-004 無權建立與無效 Owner
+#### TC-ERR-PRJ-004 無權建立與不具資格的 Owner
 - **類型與優先級**：Security／P0；**測試層級**：API、SQL；**狀態**：Planned（GAP-006）
 - **對應需求**：FLOW-PRJ
-- **前置條件**：Viewer／User；不存在、停用或 Email 未驗證的 Owner。
-- **測試步驟**：1. 無權角色建立。2. 有權角色分別以不存在、停用、未驗證 Owner 建立。3. 修改 Project 時分別指定非成員、停用成員、未驗證成員為 Owner。
+- **前置條件**：準備 Viewer／User／Admin／Administrator，以及不存在、停用、未驗證或非 Administrator 的 Owner 候選帳號。
+- **測試步驟**：1. 無建立權限角色嘗試建立。2. 有權角色分別以不存在、停用、未驗證、Admin、User、Viewer 作 Owner 建立。3. 修改時分別指定非成員或任一不合格成員為 Owner。
 - **預期結果**：無權 403；任一無效 Owner 回 422 `invalid_owner`；建立失敗不消耗已 rollback 的業務編號、不產生孤兒資料；修改失敗不移交 Owner。
 - **資料後置狀態**：不變。
 - **現有自動化覆蓋**：部分：`SqlServerConstraintTests` 測編號 rollback，不測 Project service。
@@ -384,11 +412,11 @@
 #### TC-ST-PRJ-006 修改 Project 並增加版本
 - **類型與優先級**：State／P0；**測試層級**：API、SQL、UI；**狀態**：Planned（GAP-006）
 - **對應需求**：FLOW-PRJ；optimistic concurrency
-- **前置條件**：可管理 Project，持有最新 rowVersion；新 Owner 是已啟用、Email 已驗證的既有 Project 成員。
-- **測試步驟**：更新名稱、說明、Owner、status；重新讀取。
+- **前置條件**：可管理 Project，持有最新 rowVersion；新 Owner 是已啟用、Email 已驗證、system role=Administrator 的既有 Project 成員。
+- **測試步驟**：更新名稱、說明、Owner、status、TimeZoneId；重新讀取。
 - **預期結果**：200；基本資料更新；VersionNumber 加 1；回傳新 rowVersion；稽核含前後資料；成員／Task 異動不增加 VersionNumber。
 - **資料後置狀態**：保存新資料與版本。
-- **現有自動化覆蓋**：部分：`DomainEntityTests`、`DatabaseModelTests` 只測 VersionNumber；Backend 目前未確認新 Owner 的啟用與 Email 驗證狀態。
+- **現有自動化覆蓋**：部分：`DomainEntityTests`、`DatabaseModelTests` 只測 VersionNumber；Backend 目前未確認新 Owner 的啟用、Email 驗證與 Administrator role，也沒有 TimeZoneId。
 
 #### TC-ERR-PRJ-007 Project rowVersion 衝突
 - **類型與優先級**：Concurrency／P0；**測試層級**：API、SQL、UI；**狀態**：Ready
@@ -407,6 +435,33 @@
 - **預期結果**：16 組均可成功，包含更新為相同狀態；每次成功更新依契約增加版本並留下稽核，不回傳狀態轉換錯誤。
 - **資料後置狀態**：每次操作後為指定目標狀態，並保存最新 rowVersion／VersionNumber。
 - **現有自動化覆蓋**：部分：`DomainEntityTests` 只驗證 Pending→Active，未覆蓋 16 組。
+
+#### TC-ST-PRJ-009 軟刪除 Project 並記錄刪除者
+- **類型與優先級**：Security／P0；**測試層級**：Service、API、SQL、UI；**狀態**：Planned（GAP-009、OPEN-004、OPEN-014）
+- **對應需求**：FLOW-PRJ；DB；GAP-009；OPEN-014
+- **前置條件**：Administrator 或 Admin；Project 含 Member、Task、Comment、history；持有最新 rowVersion。
+- **測試步驟**：由兩種允許角色分別刪除 Project；查一般 API、IgnoreQueryFilters 資料、DeletedAt、DeletedByAccountId 與 AuditLogs。
+- **預期結果**：回 204；Project 從一般 list/detail 隱藏；所屬 Member、Task、Comment 從一般 Project scope 隱藏但資料列未實體刪除；DeletedAt 與登入操作者 DeletedByAccountId 正確；稽核含 Project 與操作者。
+- **資料後置狀態**：Project 軟刪除且關聯歷史完整保留；本期沒有還原入口。
+- **現有自動化覆蓋**：無；目前只有 Projects.DeletedAt/query filter，尚無刪除 API、DeletedByAccountId 或 UI。
+
+#### TC-ERR-PRJ-010 Project 軟刪除授權、重複刪除與不存在資源
+- **類型與優先級**：Security／P0；**測試層級**：Service、API、UI；**狀態**：Planned（GAP-008、GAP-009、OPEN-014）
+- **對應需求**：FLOW-PRJ；GAP-008；GAP-009；OPEN-014
+- **前置條件**：Viewer、User、Administrator、Admin；準備存在、已軟刪除及不存在 Project。
+- **測試步驟**：四種角色分別刪除三種 Project；以 stale rowVersion 刪除；另直接嘗試呼叫未提供的 restore／永久刪除 endpoint 或操作 UI。
+- **預期結果**：只有 Administrator、Admin 可刪除存在 Project；其他角色對存在／不存在 Project 均優先回 403；已授權角色對不存在或已刪除 Project 回 404；stale rowVersion 回 409 `concurrency_conflict`；不提供 restore 或永久刪除 API／UI。
+- **資料後置狀態**：失敗操作不改 DeletedAt、DeletedByAccountId、子資料或 AuditLogs；成功刪除只產生一次稽核。
+- **現有自動化覆蓋**：無；功能尚未實作。
+
+#### TC-E-PRJ-011 Project IANA TimeZoneId 驗證與既有資料遷移
+- **類型與優先級**：Data integrity／P0；**測試層級**：API、SQL、UI；**狀態**：Planned（OPEN-005、OPEN-012）
+- **對應需求**：FLOW-PRJ；US-5；DB；OPEN-012
+- **前置條件**：已決議合法 IANA timezone 清單；部署設定提供 migration 預設 IANA timezone；migration 前已有 Project 資料。
+- **測試步驟**：建立／修改時分別送 `Asia/Taipei`、其他合法 IANA ID、空白、Windows timezone ID 與未知 ID；執行 migration 前置檢查及既有資料回填。
+- **預期結果**：合法 IANA ID 可保存並原樣 round-trip；新 Project 的空白、Windows ID、未知 ID 回 400 欄位錯誤且不得套用系統預設；migration 使用部署設定回填既有 Project，設定缺少或無效時 fail-fast。
+- **資料後置狀態**：新資料皆明確指定合法 TimeZoneId；既有資料使用部署設定的合法 IANA timezone 回填。
+- **現有自動化覆蓋**：無；Project 尚無 TimeZoneId 欄位。
 
 #### TC-F-MEMBER-001 成員候選人搜尋與最小揭露
 - **類型與優先級**：Security／P1；**測試層級**：API、UI；**狀態**：Ready
@@ -732,9 +787,9 @@
 #### TC-ST-REM-001 七日提醒視窗
 - **類型與優先級**：State／P0；**測試層級**：Unit、Service、SQL；**狀態**：Planned
 - **對應需求**：US-5；Email 到期提醒 Flowchart
-- **前置條件**：固定系統時區與 now；未完成 Task。
-- **測試步驟**：資料驅動測 deadline 相對今天 -4 至 +4 天（到期前以正向天數表示）。
-- **預期結果**：只在到期前 3/2/1 天、當天、逾期 1/2/3 天建立每日提醒；其餘不建立。
+- **前置條件**：Project 具有合法 IANA TimeZoneId；固定 UTC now 與 Project 當地日期；未完成 Task。
+- **測試步驟**：在 Project 當地時間每日 08:00 執行掃描，資料驅動測 deadline 當地日期相對今天 -4 至 +4 天（到期前以正向天數表示）。
+- **預期結果**：只在到期前 3/2/1 天、當天、逾期 1/2/3 天建立每日提醒；UTC 日期不同不得影響 Project 當地日期判斷；其餘不建立。
 - **資料後置狀態**：每個有效日期一筆 Pending reminder。
 - **現有自動化覆蓋**：無；功能尚未實作。
 
@@ -778,8 +833,8 @@
 - **類型與優先級**：State／P0；**測試層級**：Service、SQL；**狀態**：Planned
 - **對應需求**：US-5
 - **前置條件**：provider 持續失敗。
-- **測試步驟**：執行初次寄送與三次 retry，再觸發一次。
-- **預期結果**：總嘗試最多 4 次；前三次失敗安排有限重試；第 4 次後 Failed、告警；不再排程。
+- **測試步驟**：固定 TimeProvider；執行初次寄送，分別在失敗後 4:59／5:00、14:59／15:00、59:59／60:00 驗證三次 retry，再觸發一次。
+- **預期結果**：總嘗試最多 4 次；三次 retry 分別只在 5、15、60 分鐘到期後執行；第 4 次總嘗試失敗後標為 Failed，同時寫入 DB 與結構化 log 告警，不再排程。
 - **資料後置狀態**：Failed、retryCount=3、保留錯誤與告警。
 - **現有自動化覆蓋**：無。
 
@@ -809,6 +864,24 @@
 - **預期結果**：摘要數量與原因正確；CancellationToken 中止後不繼續建立／寄送，已提交資料保持一致。
 - **資料後置狀態**：只有中止前已完成的原子操作存在。
 - **現有自動化覆蓋**：無。
+
+#### TC-ST-REM-010 多 Project 時區皆於當地 08:00 執行
+- **類型與優先級**：State／P0；**測試層級**：Unit、Service；**狀態**：Planned（OPEN-005）
+- **對應需求**：US-5；GAP-012；OPEN-005
+- **前置條件**：至少三個不同 UTC offset 的 IANA TimeZoneId Project，Task 皆在提醒視窗內；固定 TimeProvider。
+- **測試步驟**：沿 UTC 時間軸推進並逐分鐘執行 scheduler 判斷；記錄各 Project scanner 的當地執行時間。
+- **預期結果**：每個 Project 每個當地日只在 08:00 取得一次掃描資格；不得以伺服器本機時區統一判斷；同一 UTC 時刻可執行零至多個 Project。
+- **資料後置狀態**：每 Project／當地提醒日期最多建立一批符合資格的 reminder。
+- **現有自動化覆蓋**：無；Project timezone 與 scheduler 尚未實作。
+
+#### TC-ERR-REM-011 DST、08:00 漏跑與告警查詢
+- **類型與優先級**：Operational／P1；**測試層級**：Service、SQL；**狀態**：Planned（OPEN-010）
+- **對應需求**：US-5；OPEN-010
+- **前置條件**：使用有 DST 的 IANA timezone；可模擬 scheduler 在 08:00 停機及最終寄送失敗。
+- **測試步驟**：測 DST 切換日、08:00 前後停機／恢復、同一當地時間重複，以及達到 retry 上限後的營運查詢。
+- **預期結果**：以 Project 當地日期作為冪等鍵，DST 重複／跳時不得重複或遺漏；08:00 漏跑後在同一當地日恢復即補跑，跨日不補前一日；最終 Failed 同時寫 DB 與結構化 log，本期不提供管理 UI。
+- **資料後置狀態**：每 Project／當地日期最多一批 reminder；補跑與最終失敗均可由 DB／log 追蹤。
+- **現有自動化覆蓋**：無；需求細節與功能皆尚未完成。
 
 ### 4.7 SQL、API 共通與平台
 
@@ -840,11 +913,11 @@
 - **現有自動化覆蓋**：無。
 
 #### TC-SQL-004 FK 與刪除行為
-- **類型與優先級**：Data integrity／P1；**測試層級**：SQL；**狀態**：Ready
+- **類型與優先級**：Data integrity／P1；**測試層級**：SQL；**狀態**：Planned（OPEN-009；其餘既有 FK 可先執行）
 - **對應需求**：DB
 - **前置條件**：完整關聯資料。
-- **測試步驟**：嘗試刪除被 Project/Task/history/comment/audit 參照的 Account、Project、Task；另刪除 membership。
-- **預期結果**：Restrict/NoAction 防止遺失歷史；刪 membership 僅 cascade 其 ProjectMemberRoles；Identity 支援資料依 migration 規則處理。
+- **測試步驟**：嘗試刪除被 Project/Task/history/comment/audit 參照的 Account、Project、Task；另刪除 membership，並嘗試刪除被 Projects.DeletedByAccountId 參照的 Account。
+- **預期結果**：既有 Restrict/NoAction 防止遺失歷史；刪 membership 僅 cascade 其 ProjectMemberRoles；Identity 支援資料依 migration 規則處理；被 DeletedByAccountId 參照的 Account 因 NoAction 不得刪除。
 - **資料後置狀態**：失敗刪除不破壞參照完整性。
 - **現有自動化覆蓋**：無。
 
@@ -858,7 +931,7 @@
 - **現有自動化覆蓋**：`ApiSurfaceTests` 只確認 schema 有 rowVersion。
 
 #### TC-SQL-006 Audit 與 History 不相信 request 操作者
-- **類型與優先級**：Security／P0；**測試層級**：Service、SQL；**狀態**：Ready
+- **類型與優先級**：Security／P0；**測試層級**：Service、SQL；**狀態**：Planned（GAP-009；其餘既有異動可先執行）
 - **對應需求**：各異動 Flowchart、DB
 - **前置條件**：登入 actor 與目標 account 不同。
 - **測試步驟**：建立／修改／刪除 Project、Member、Task、Comment、User；檢查記錄。
@@ -867,20 +940,20 @@
 - **現有自動化覆蓋**：無。
 
 #### TC-SQL-007 重複 Email DB constraint
-- **類型與優先級**：Data integrity／P0；**測試層級**：SQL、API；**狀態**：Planned（GAP-010、OPEN-006）
-- **對應需求**：AUTH、DB
-- **前置條件**：已依 OPEN-006 決議新增 NormalizedEmail UNIQUE migration；準備含重複 normalized Email 與 NULL 的 migration 前資料集。
-- **測試步驟**：1. 驗證 migration 前置檢查可辨識既有重複資料。2. 依確認的清理／中止策略套用 migration。3. 繞過 UserManager 並行插入相同 NormalizedEmail。4. 以大小寫不同但正規化後相同的 Email 註冊。5. 依確認規則測 NULL。
-- **預期結果**：migration 不會靜默遺失／任意合併既有帳號；DB 拒絕第二筆相同非 NULL NormalizedEmail；大小寫正規化後不得重複；NULL 與 API 衝突結果完全依 OPEN-006 的固定契約驗收，不得回 500。
-- **資料後置狀態**：所有非 NULL NormalizedEmail 不重複；NULL 資料依 OPEN-006 決議處理。
+- **類型與優先級**：Data integrity／P0；**測試層級**：SQL、API；**狀態**：Planned（GAP-010、OPEN-006、OPEN-015）
+- **對應需求**：AUTH、DB；OPEN-015
+- **前置條件**：已將 NormalizedEmail 改為 NOT NULL 並新增無 filter UNIQUE index；準備含重複 normalized Email 與 NULL 的 migration 前資料集。
+- **測試步驟**：1. 以 NULL／重複髒資料執行 migration。2. 人工修正後重跑。3. 繞過 UserManager 並行插入相同 NormalizedEmail。4. 以大小寫不同但正規化後相同的 Email 註冊。5. 測試 NULL。
+- **預期結果**：髒資料使 migration fail-fast，不自動合併、刪除或任意改寫帳號；人工修正後 migration 成功；NULL 被 NOT NULL 拒絕；重複被 UNIQUE 拒絕；API 競態固定回 409 `duplicate_email` 且含 `errors.email`，不得回 500。
+- **資料後置狀態**：所有 Account 均有唯一且非 NULL 的 NormalizedEmail。
 - **現有自動化覆蓋**：無。
 
 #### TC-SQL-008 Refresh Token replacement self-FK
 - **類型與優先級**：Data integrity／P0；**測試層級**：SQL、Service；**狀態**：Planned（GAP-011、OPEN-008）
 - **對應需求**：AUTH、DB；GAP-011
-- **前置條件**：已建立 `RefreshTokens.ReplacedByTokenId` nullable self-FK，並完成 OPEN-008 DeleteBehavior 決議。
+- **前置條件**：已建立 `RefreshTokens.ReplacedByTokenId` nullable self-FK，DeleteBehavior=NoAction。
 - **測試步驟**：1. 建立合法 A→B rotation chain。2. 嘗試寫入不存在的 replacement ID。3. 嘗試實體刪除仍被 A 參照的 B。4. 撤銷 token family 並檢查 chain。
-- **預期結果**：合法 chain 可保存；不存在 ID 被 FK 拒絕；實體刪除與關聯後置狀態符合 OPEN-008 的唯一決議；family 撤銷不破壞參照完整性。
+- **預期結果**：合法 chain 可保存；不存在 ID 被 FK 拒絕；刪除被參照 Token 時由 DB 拒絕，不 cascade 刪除舊 Token；撤銷 family 不破壞參照完整性。
 - **資料後置狀態**：只保留有效參照的 rotation chain；失敗操作完整 rollback。
 - **現有自動化覆蓋**：無；目前欄位只有應用層邏輯參照，尚無 DB FK。
 
@@ -1007,16 +1080,16 @@
 
 | 需求 | 主要案例 | Happy path | Edge／Error | State／Concurrency | 狀態 |
 |---|---|---:|---:|---:|---|
-| AUTH | AUTH 系列 001–017 | ✓ | ✓ | ✓ | 部分；Token 重寄失效 Planned，重放語意與時效待確認 |
+| AUTH | AUTH 系列 001–019 | ✓ | ✓ | ✓ | 部分；3 分鐘 Token、重寄／重放與登入 rate limit 皆為 Planned |
 | US-1 | TASK 系列 001–005 | ✓ | ✓ | ✓ | Ready |
 | US-2 | TASK 系列 006–018、TC-F-PREF-001 | ✓ | ✓ | ✓ | 部分；批次上限與 403 優先序 Planned |
 | US-3 | TC-F-AUTH-014、TC-F-TASK-006 | ✓ | ✓ | ✓ | Ready |
 | US-4 | TC-ST-TASK-003、TC-ERR-TASK-005、CMT 系列 001–008 | ✓ | ✓ | ✓ | Ready |
-| US-5 | REM 系列 001–009 | ✓ | ✓ | ✓ | Planned |
+| US-5 | REM 系列 001–011、TC-E-PRJ-011 | ✓ | ✓ | ✓ | Planned；時區、DST、補跑、重試及告警契約已決議 |
 | US-6 | TC-F-TASK-008、TC-ERR-TASK-009 | ✓ | ✓ | ✓ | 部分；Description 契約對齊 Planned |
 | US-7 | TASK 系列 010–014 | ✓ | ✓ | ✓ | Ready |
 | US-8 | TC-F-TASK-019、TC-ST-TASK-020、TC-SQL-003 | ✓ | ✓ | ✓ | Ready |
-| FLOW-PRJ | PRJ 系列 001–008 | ✓ | ✓ | ✓ | 部分；欄位邊界與 Owner 驗證 Planned |
+| FLOW-PRJ | PRJ 系列 001–011 | ✓ | ✓ | ✓ | 部分；欄位邊界、Administrator Owner、TimeZoneId 與 Project 軟刪除 Planned |
 | FLOW-MEMBER | MEMBER 系列 001–007 | ✓ | ✓ | ✓ | Ready |
 | FLOW-USER | USER 系列 001–008 | ✓ | ✓ | ✓ | Ready；現行版本不含個資編輯 |
 | PREF | PREF 系列 001–002 | ✓ | ✓ | ✓ | Ready |
@@ -1040,12 +1113,12 @@
 4. Project member 加入／角色取代／Owner 移交／未完成 Task 阻擋。
 5. Task／Comment 軟刪除、關聯保存與 query filters。
 6. 前端清單 query、返回狀態、checkbox 權限、確認偏好及 403/409/422 UX。
-7. BE-001 實作後，補齊 TC-ST-REM-001～009 的 clock-controlled 與 SQL concurrency 測試。
+7. BE-001 實作後，補齊 TC-ST-REM-001～011 與 TC-E-PRJ-011 的 clock-controlled、IANA timezone 與 SQL concurrency 測試。
 
 ## 7. 執行注意事項
 
 - SQL 與 transaction 案例必須使用隔離的 SQL Server，不得用 EF InMemory 取代 relational constraint／rowversion／transaction 行為。
 - Email 測試使用可控制的 gateway fake；只有 SMTP smoke test 才連外，且不得記錄完整驗證 token、密碼或 App Password。
 - E2E 每次建立唯一資料並清理；不得依測試順序或既有正式資料。
-- 涉及時間的案例固定 `TimeProvider`、UTC 與產品設定時區；到期提醒實作前先定義 DST 與「日期」邊界。
+- 涉及時間的案例固定 `TimeProvider`、UTC 與 Project IANA timezone；到期提醒以 Project 當地日期作冪等鍵，並依 OPEN-010 的 DST／當日補跑規則驗證。
 - `Planned` 案例不是通過或失敗；它代表必須先完成需求決議或功能實作。
