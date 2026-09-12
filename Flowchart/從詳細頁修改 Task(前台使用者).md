@@ -6,7 +6,9 @@ flowchart TB
     openTask --> taskAccessible{Task 存在且有查看權限？}
     taskAccessible -->|不存在| notFoundTask[顯示 404]
     taskAccessible -->|無權限| forbiddenTaskDetail[顯示 403]
-    taskAccessible -->|是| editAllowedFields[修改狀態或交付期限]
+    taskAccessible -->|是| clickEdit[按下編輯]
+    clickEdit --> openEditRoute[導向編輯 route 並預填資料]
+    openEditRoute --> editAllowedFields[修改狀態或交付期限]
     editAllowedFields --> submitDetail{選擇動作}
     submitDetail -->|取消| returnToList[返回並保留搜尋與分頁條件]
     submitDetail -->|儲存| validateDetail{後端授權、狀態與日期有效？}
@@ -18,3 +20,5 @@ flowchart TB
     detailSucceeded -->|否| retainDetail
     detailSucceeded -->|是| refreshDetail([顯示成功訊息與最新資料])
 ```
+
+Task Detail 不提供 Task 欄位的頁內聯編輯。具備修改權限的被指派者透過 `/admin/projects/{projectId}/task-items/{taskId}/edit` 調整狀態與交付期限；具備後台 Task 管理權限者可在同一編輯 route 修改全部可編輯欄位。

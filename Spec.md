@@ -4,6 +4,7 @@
 - UserStory.md
 
 ## UIMock(UI草圖)
+- README.md (草圖與現行契約差異；PNG 與文字衝突時以本文、User Story 與 Flowchart 為準)
 - SignIn.png (登入畫面)
 - SignUp.png (註冊畫面)
 - UserList.png (使用者清單)

@@ -8,31 +8,31 @@
 - **狀態定義**：`Ready` 表示已有可測介面；`Planned` 表示需求已定義但功能尚未實作，或因契約缺口尚不能執行。
 - **自動化覆蓋說明**：僅依目前 repository 中實際存在的測試檔判定；「部分」不代表本次已執行通過。
 
-## 2. 規格衝突與缺口（先決議，不自行猜測）
+## 2. 規格衝突決議與缺口
 
-### 2.1 衝突
+### 2.1 已決議的衝突
 
-| ID | 主題 | 來源 A | 來源 B／目前實作 | 影響與處理 |
+| ID | 主題 | 原衝突 | 決議 | 規格修正狀態 |
 |---|---|---|---|---|
-| CON-001 | 未驗證帳號登入 | `Flowchart/註冊、Email 驗證與登入.md`：未驗證不能登入 | `UserStory.md`、Backend `AGENTS.md`、`AuthService`：可登入，但有效角色與 Functions 固定為 Viewer | 本文件依明示的需求優先序，以 User Story 行為建立 Ready 案例；舊 Flowchart 應修正。 |
-| CON-002 | Email 驗證後角色 | 舊 Flowchart：驗證後「授予 User」 | User Story、Backend 規範與前後端：驗證後仍為 Viewer，須由 Admin 調整 | 依 User Story 建立案例；不得測成自動升級 User。 |
-| CON-003 | 註冊欄位 | `SignUp.png` 只有帳號、密碼、Email | Flowchart、API 與 UI 要求確認密碼；目前程式另要求顯示名稱 | 顯示名稱是否為產品需求仍欠明文驗收條件；現況案例依 API 契約測試，另列 GAP-001。 |
-| CON-004 | Project Role 基數 | `Schema.md`／UI Mock／流程文字看似單一 Project Role | 正式 migration、API 與現行 UI 支援一名成員多個 Project Roles | 依正式 migration 與 API 契約測複選、取代與唯一性；規格稿需同步。 |
-| CON-005 | Task 清單批次刪除 | `TaskItemList.png` 有 Delete、ClearAll，暗示以勾選資料刪除 | User Story 明定 checkbox 僅供批次改狀態；刪除為後台每列軟刪除 | 不建立批次刪除成功案例；草圖按鈕需移除或另立需求。 |
-| CON-006 | 批次目標狀態初始值 | User Story：尚未選擇目標狀態時確認鈕 Disabled | 現行 `TaskListView` 預設 `InProgress`，因此只要選 Task 即可送出 | 對應 UI 案例標為 Planned，待產品決定保留預設值或空值。 |
-| CON-007 | Project 表單限制 | Frontend：名稱 2–120 字、Description 必填 | Backend／DB：名稱只在 service 檢查非空，DB 上限 200；Description 可空、上限 4000 | 邊界值無一致契約；相關極值案例標為 Planned，基本必填行為仍可測。 |
-| CON-008 | Task Description 必填 | 現行 Frontend textarea `required` | API、Domain 與 DB 允許 null／空 Description | 空 Description 的 E2E 預期需決議；API 案例依正式 contract 測可空。 |
-| CON-009 | 使用者設定範圍 | `UserSetting.png` 顯示帳號、姓名、Email、角色及專案角色 | 現行 `/settings` 只管理語言與批次確認偏好；`/users/{id}` 只管理角色與啟用狀態 | 不猜測個資編輯 API；個資編輯列為 Planned。 |
-| CON-010 | Schema 主鍵與資料模型 | `Schema.md` 使用字串帳號、明文式 `Password` 欄位、複合 PK 與舊表名 | 正式 EF migration 使用 Identity GUID、`PasswordHash`、獨立關聯、rowversion | SQL 案例只以 migration／snapshot 為正式 schema；`Schema.md` 應標成歷史草稿或改寫。 |
-| CON-011 | C4 Email 範圍 | C4 設計邊界寫 Email 只供帳號驗證、未納入到期提醒 | User Story、Flowchart、ImplementationBacklog 已定案 Task 到期提醒 | 提醒案例全部標為 Planned；C4 後續需加入 scheduler／worker／提醒紀錄。 |
-| CON-012 | Project 清單搜尋方式 | `ProjectList.png` 提供 ProjectID、Name、Description、Owner 各自啟用的查詢欄 | 現行 API／UI 使用單一 search（code/name/description）與 status，沒有 owner filter | 僅測正式 API 現況；多欄位／Owner 篩選待決。 |
-| CON-013 | Task 詳情操作型態 | `TaskItemDetail.png` 在詳情直接 Confirm／Cancel | 現行 UI 由詳情頁導向 edit route；留言另有新增／編輯／刪除 | 依 User Story 的「可修改」語意與現行 route 測試，不限定必須 inline 編輯。 |
+| CON-001 | 未驗證帳號登入 | 舊 Flowchart 要求已驗證，現行程式允許登入 | 允許登入，但有效角色與 Functions 固定為 `Viewer` | 已更新 User Story 與登入 Flowchart |
+| CON-002 | Email 驗證後角色 | 舊 Flowchart 自動授予 `User` | 驗證後維持 `Viewer`，只能由 Admin 改角色 | 已更新驗證 Flowchart |
+| CON-003 | 註冊欄位 | 舊草圖缺少顯示名稱與確認密碼 | 帳號、顯示名稱、Email、密碼、確認密碼均必填；顯示名稱 1–100 字 | 已更新 User Story、Flowchart 與 `UIMock/README.md` |
+| CON-004 | Project Role 基數 | 舊 Schema／草圖／流程看似單一角色 | 成員可有多個 Project Roles；修改時完整取代且至少一個 | 已更新 User Story、Flowchart、Schema 與 UI 草圖契約 |
+| CON-005 | Task 清單批次刪除 | 舊草圖暗示 checkbox 支援批次刪除 | checkbox 只供批次改狀態；刪除為後台每列單筆軟刪除 | 已更新 `UIMock/README.md` |
+| CON-006 | 批次目標狀態初始值 | User Story 要求先選狀態，UI 預設 `InProgress` | 保留 `InProgress` 預設值；只在未選 Task 時停用確認 | 已更新 User Story、Flowchart 與 UI 草圖契約 |
+| CON-007 | Project 表單限制 | Frontend 與 Backend／DB 不一致 | Name trim 後 1–200 字；Description 選填且最多 4000 字 | 已更新 User Story、Flowchart 與 UI 草圖契約；Frontend 尚待對齊 |
+| CON-008 | Task Description 必填 | Frontend 必填，Backend／DB 允許空值 | Description 選填；有值時 trim 後最多 8000 字 | 已更新 User Story、Flowchart 與 UI 草圖契約；Frontend 尚待對齊 |
+| CON-009 | 使用者設定範圍 | 舊草圖將個資、系統角色與專案角色放在同頁 | Settings 只管理語言與批次確認偏好；系統角色／啟用狀態在 User Detail；Project Roles 在 Project Detail | 已更新 User Story、C4 與 UI 草圖契約 |
+| CON-010 | Schema 主鍵與資料模型 | 舊 Schema 為字串主鍵與明文式 Password | 以 EF migrations／model snapshot 為正式來源，使用 Identity GUID、`PasswordHash`、獨立關聯與 rowversion | `Schema.md` 已依現行模型改寫 |
+| CON-011 | C4 Email 範圍 | C4 只繪出驗證信 | 加入到期提醒 Scanner、Sender、紀錄、retry 與告警，全部明確標為 Planned | C4 已更新，不代表功能已實作 |
+| CON-012 | Project 清單搜尋方式 | 舊草圖為多欄位查詢與 Owner 篩選 | 單一 search 查 Code／Name／Description，另有 status；無 Owner filter | 已更新 User Story 與 UI 草圖契約 |
+| CON-013 | Task 詳情操作型態 | 舊草圖在詳情頁直接 Confirm／Cancel | Task Detail 為詳情與留言；修改導向 `/admin/projects/{projectId}/task-items/{taskId}/edit` | 已更新 User Story、Flowchart、C4 與 UI 草圖契約 |
 
 ### 2.2 規格與實作缺口
 
 | ID | 缺口 | 影響 |
 |---|---|---|
-| GAP-001 | User Story 未定義顯示名稱是否必填、長度與可用字元；API 現況為必填且最多 100 字。 | 驗收規格需補齊，避免 UI／API 漂移。 |
+| GAP-001 | 顯示名稱已定為必填且 trim 後 1–100 字，但 Frontend input 尚未設定 `maxlength=100`。 | API 會拒絕超長輸入，但 UI 無法在送出前提供立即回饋。 |
 | GAP-002 | Email 驗證 token 的明確有效期間、重寄後舊 token 是否失效、重寄冷卻／頻率未定義。 | 過期與重送安全案例只能部分執行。 |
 | GAP-003 | 登入失敗鎖定、rate limit、CAPTCHA 與稽核要求未定義。 | 暴力嘗試防護無可驗收門檻。 |
 | GAP-004 | Project status 的合法狀態轉換未定義；目前 API 接受 enum 內任意目標。 | 只能測現行 enum，不能斷言業務狀態機。 |
@@ -265,14 +265,14 @@
 - **資料後置狀態**：每次成功後仍只有一個系統角色；失敗時完全不變。
 - **現有自動化覆蓋**：無。
 
-#### TC-E-USER-008 個資編輯能力不得由 UI Mock 推測
-- **類型與優先級**：Requirement gap／P2；**測試層級**：UI、API；**狀態**：Planned（CON-009）
-- **對應需求**：`UserSetting.png`；GAP/CON-009
-- **前置條件**：先決議可編輯欄位、本人／Admin 權限、驗證與 API 契約。
-- **測試步驟**：決議後測 Account、Name、Email 的顯示、修改、重複值、重新驗證與稽核。
-- **預期結果**：只允許明確授權欄位；Email 變更是否撤銷驗證狀態依新契約；目前不得出現臆測式 request。
-- **資料後置狀態**：現階段不應有個資異動。
-- **現有自動化覆蓋**：無；功能／契約尚未實作。
+#### TC-E-USER-008 現行版本不提供個資編輯
+- **類型與優先級**：Negative contract／P2；**測試層級**：UI、API；**狀態**：Ready
+- **對應需求**：User Story「畫面與查詢契約」；CON-009
+- **前置條件**：一般登入使用者與 Admin。
+- **測試步驟**：1. 開啟 `/settings`。2. 開啟 `/users/{id}`。3. 檢查可用 API 與畫面操作。
+- **預期結果**：Settings 只提供語言與批次確認偏好；User Detail 只讀顯示帳號、名稱、Email 與驗證狀態，Admin 只可修改系統角色與啟用狀態；不存在 Account、Name、Email 編輯 request。
+- **資料後置狀態**：個資不變；只有使用者明確儲存時才異動偏好、系統角色或啟用狀態。
+- **現有自動化覆蓋**：無。
 
 #### TC-F-PREF-001 讀寫個人批次確認偏好
 - **類型與優先級**：Functional／P1；**測試層級**：API、SQL、UI、E2E；**狀態**：Ready
@@ -333,11 +333,11 @@
 #### TC-E-PRJ-005 Project 欄位邊界
 - **類型與優先級**：Edge／P1；**測試層級**：API、SQL、UI；**狀態**：Planned（CON-007）
 - **對應需求**：FLOW-PRJ；DB
-- **前置條件**：待決議名稱長度與 Description optional 規則。
-- **測試步驟**：決議後測名稱 1/2/120/121/200/201 字及 description 空值/4000/4001 字。
-- **預期結果**：前後端在同一界線接受或拒絕，回欄位錯誤而非 DB 500。
+- **前置條件**：Frontend 完成對齊正式輸入契約。
+- **測試步驟**：測名稱 trim 後 0/1/2/120/121/200/201 字及 description 空值/4000/4001 字。
+- **預期結果**：名稱 1–200 字通過，0 或 201 字拒絕；description 空值或最多 4000 字通過，4001 字拒絕；前後端界線一致且回欄位錯誤而非 DB 500。
 - **資料後置狀態**：拒絕值不建立／更新。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：無；Frontend 現況仍為名稱 2–120 字且 Description 必填。
 
 #### TC-ST-PRJ-006 修改 Project 並增加版本
 - **類型與優先級**：State／P0；**測試層級**：API、SQL、UI；**狀態**：Ready
@@ -476,12 +476,12 @@
 - **資料後置狀態**：只可能變更批次目標 Task status，不保存選取狀態。
 - **現有自動化覆蓋**：無。
 
-#### TC-E-TASK-007 未選 Task／未選目標狀態禁止確認
-- **類型與優先級**：Edge／P1；**測試層級**：UI；**狀態**：Planned（CON-006）
+#### TC-E-TASK-007 未選 Task 時禁止確認
+- **類型與優先級**：Edge／P1；**測試層級**：UI；**狀態**：Ready
 - **對應需求**：US-2
-- **前置條件**：產品決議目標狀態是否允許預設值。
-- **測試步驟**：不選 Task、只選 Task 未選 status、只選 status 未選 Task。
-- **預期結果**：需求版為確認鈕 disabled；不得送 API。
+- **前置條件**：Task 清單含至少一筆可修改 Task。
+- **測試步驟**：1. 進入頁面且不選 Task。2. 確認目標狀態預設為 `InProgress`。3. 選取一筆 Task。4. 清除選取。
+- **預期結果**：未選 Task 時確認鈕 disabled 且不得送 API；選取 Task 後可用預設 `InProgress` 送出；清除選取後再次 disabled。
 - **資料後置狀態**：不變。
 - **現有自動化覆蓋**：無。
 
@@ -499,7 +499,7 @@
 - **對應需求**：US-6
 - **前置條件**：可建立 Task。
 - **測試步驟**：測空標題、301 字標題、不存在／其他 Project assignee、startAt>deadline；另 API 送空 description。
-- **預期結果**：非法資料回 400/422 對應 code；空 description 依 API contract 可接受（CON-008）；失敗不產生 Task/history/audit 或消耗編號。
+- **預期結果**：非法資料回 400/422 對應 code；依正式契約，空 description 可接受，有值時 trim 後最多 8000 字；失敗不產生 Task/history/audit 或消耗編號。
 - **資料後置狀態**：失敗個案不變。
 - **現有自動化覆蓋**：無。
 
@@ -926,11 +926,11 @@
 - **現有自動化覆蓋**：無。
 
 #### TC-F-UI-008 UI Mock 核心資訊對照
-- **類型與優先級**：Visual contract／P2；**測試層級**：UI；**狀態**：Ready（排除 CON-003/005/009/012/013 的衝突控制）
-- **對應需求**：八張 `UIMock/*.png`
+- **類型與優先級**：Visual contract／P2；**測試層級**：UI；**狀態**：Ready
+- **對應需求**：八張 `UIMock/*.png` 與 `UIMock/README.md`
 - **前置條件**：各角色與代表資料。
 - **測試步驟**：逐頁核對 SignIn、SignUp、UserList、UserSetting、ProjectList、ProjectDetail、TaskItemList、TaskItemDetail 的核心資訊與返回操作。
-- **預期結果**：User Story 所需資訊可見；衝突或過時控制不作 pass/fail 依據；所有差異連回本文件 CON 清單。
+- **預期結果**：User Story 所需資訊可見；PNG 舊控制與文字契約不同時，以 `UIMock/README.md`、User Story 與 Flowchart 為 pass/fail 依據。
 - **資料後置狀態**：不變。
 - **現有自動化覆蓋**：部分：現有 component/E2E 測試只覆蓋少數頁面結構。
 
@@ -940,7 +940,7 @@
 |---|---|---:|---:|---:|---|
 | AUTH | AUTH 系列 001–014 | ✓ | ✓ | ✓ | Ready；token 時效仍有 GAP-002 |
 | US-1 | TASK 系列 001–005 | ✓ | ✓ | ✓ | Ready |
-| US-2 | TASK 系列 006–018、TC-F-PREF-001 | ✓ | ✓ | ✓ | 部分；未選 target status 為 Planned |
+| US-2 | TASK 系列 006–018、TC-F-PREF-001 | ✓ | ✓ | ✓ | Ready |
 | US-3 | TC-F-AUTH-014、TC-F-TASK-006 | ✓ | ✓ | ✓ | Ready |
 | US-4 | TC-ST-TASK-003、TC-ERR-TASK-005、CMT 系列 001–008 | ✓ | ✓ | ✓ | Ready |
 | US-5 | REM 系列 001–009 | ✓ | ✓ | ✓ | Planned |
@@ -949,10 +949,10 @@
 | US-8 | TC-F-TASK-019、TC-ST-TASK-020、TC-SQL-003 | ✓ | ✓ | ✓ | Ready |
 | FLOW-PRJ | PRJ 系列 001–007 | ✓ | ✓ | ✓ | 部分；欄位邊界 Planned |
 | FLOW-MEMBER | MEMBER 系列 001–007 | ✓ | ✓ | ✓ | Ready |
-| FLOW-USER | USER 系列 001–008 | ✓ | ✓ | ✓ | 部分；個資編輯 Planned |
+| FLOW-USER | USER 系列 001–008 | ✓ | ✓ | ✓ | Ready；現行版本不含個資編輯 |
 | PREF | PREF 系列 001–002 | ✓ | ✓ | ✓ | Ready |
 | API／DB | SQL 系列 001–007、API 系列 001–004 | ✓ | ✓ | ✓ | 部分；Email UNIQUE Planned |
-| UI／UIMock | UI 系列 001–008 | ✓ | ✓ | ✓ | Ready；衝突項待決 |
+| UI／UIMock | UI 系列 001–008 | ✓ | ✓ | ✓ | Ready；舊 PNG 差異依 `UIMock/README.md` |
 
 ## 6. 自動化覆蓋摘要與建議順序
 

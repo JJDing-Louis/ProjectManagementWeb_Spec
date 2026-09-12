@@ -2,9 +2,9 @@
 
 ```mermaid
 flowchart TB
-    batchStart([Task Item List]) --> selectEditable[勾選一或多筆可修改的 Task]
-    selectEditable --> chooseStatus[選擇目標狀態]
-    chooseStatus --> batchReady{已選 Task 與目標狀態？}
+    batchStart([Task Item List；目標狀態預設 InProgress]) --> selectEditable[勾選一或多筆可修改的 Task]
+    selectEditable --> chooseStatus[保留預設值或選擇其他目標狀態]
+    chooseStatus --> batchReady{已選至少一筆 Task？}
     batchReady -->|否| disableSubmit[停用確認變更按鈕]
     disableSubmit --> selectEditable
     batchReady -->|是| needConfirmation{需要顯示確認視窗？}

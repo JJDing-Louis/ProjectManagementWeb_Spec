@@ -16,13 +16,13 @@ C4Context
     Person(admin, "Admin", "管理使用者、系統角色及全部專案資料")
 
     System(myWorkItem, "My Work Item", "公司內部的專案、成員、Task Item 與留言管理系統")
-    System_Ext(emailService, "Google Gmail SMTP", "寄送帳號驗證信")
+    System_Ext(emailService, "Google Gmail SMTP", "寄送帳號驗證信，並在 Planned 階段寄送 Task 到期提醒")
 
     Rel(visitor, myWorkItem, "註冊、驗證 Email 與登入", "HTTPS")
     Rel(member, myWorkItem, "查看專案並處理工作", "HTTPS")
     Rel(administrator, myWorkItem, "管理專案與工作", "HTTPS")
     Rel(admin, myWorkItem, "管理系統與權限", "HTTPS")
-    Rel(myWorkItem, emailService, "寄送帳號驗證信", "SMTP")
+    Rel(myWorkItem, emailService, "寄送帳號驗證信與 Planned Task 到期提醒", "SMTP")
 
     UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
 ```
@@ -36,18 +36,18 @@ C4Container
     title Project Management Web - Container Diagram（設計草稿）
 
     Person(systemUser, "系統使用者", "訪客、專案成員、後台管理員與 Admin")
-    System_Ext(emailService, "Google Gmail SMTP", "寄送帳號驗證信")
+    System_Ext(emailService, "Google Gmail SMTP", "寄送帳號驗證信與 Planned Task 到期提醒")
 
     Container_Boundary(myWorkItemBoundary, "My Work Item") {
         Container(webApp, "前端網站", "Vue 3 SPA", "提供註冊、登入、使用者、專案、Task Item、留言與偏好設定畫面")
-        Container(api, "後端 API", "ASP.NET Core Web API", "執行身分驗證、授權、輸入驗證、業務規則、交易與稽核")
-        ContainerDb(database, "應用程式資料庫", "SQL Server", "保存使用者、角色、登入 Session、專案、成員、Task Item、留言、偏好與稽核資料")
+        Container(api, "後端 API", "ASP.NET Core Web API", "執行身分驗證、授權、業務規則、交易與稽核；Task 到期掃描與寄送 Worker 為 Planned")
+        ContainerDb(database, "應用程式資料庫", "SQL Server", "保存使用者、角色、Session、專案、Task、留言、偏好與稽核；到期提醒紀錄為 Planned")
     }
 
     Rel(systemUser, webApp, "操作系統", "HTTPS")
     Rel(webApp, api, "呼叫 RESTful API", "JSON/HTTPS")
     Rel(api, database, "查詢與寫入資料", "SQL/TLS")
-    Rel(api, emailService, "寄送帳號驗證信", "SMTP/TLS")
+    Rel(api, emailService, "寄送帳號驗證信與 Planned Task 到期提醒", "SMTP/TLS")
 
     UpdateLayoutConfig($c4ShapeInRow="2", $c4BoundaryInRow="1")
 ```
@@ -65,9 +65,9 @@ C4Component
     Container_Boundary(webBoundary, "前端網站（Vue 3 SPA）") {
         Component(router, "Router 與 Route Guards", "Vue Router", "依登入狀態與角色載入頁面；僅負責導覽，不取代後端授權")
         Component(authViews, "帳號與驗證畫面", "Vue Views", "SignIn、SignUp、EmailVerification 與 ResendVerification")
-        Component(userViews, "使用者管理畫面", "Vue Views", "UserList 與 UserSetting")
-        Component(projectViews, "專案管理畫面", "Vue Views", "ProjectList 與 ProjectDetail")
-        Component(taskViews, "Task 與留言畫面", "Vue Views", "TaskItemList、TaskItemDetail、TaskItemForm 與 BatchStatusDialog")
+        Component(userViews, "使用者與偏好畫面", "Vue Views", "UserList、UserDetail 與 Settings")
+        Component(projectViews, "專案管理畫面", "Vue Views", "ProjectList、ProjectDetail 與 ProjectForm")
+        Component(taskViews, "Task 與留言畫面", "Vue Views", "TaskList、TaskDetail 與 TaskForm；批次確認現由 TaskList 處理")
         Component(clientState, "狀態與 API Client", "Pinia / HTTP Client", "保存登入狀態與查詢條件，統一處理 Token、HTTP 錯誤及 API 呼叫")
     }
 
@@ -102,17 +102,19 @@ C4Component
             Component(identityService, "Identity 與 User Service", "C#", "執行帳號、Session、Token、角色、Email 驗證與偏好規則")
             Component(projectService, "Project Service", "C#", "執行專案、Owner、成員、角色與版本衝突規則")
             Component(taskService, "Task 與 Comment Service", "C#", "執行狀態轉換、指派、批次交易、軟刪除與留言規則")
+            Component(reminderScanner, "Task Reminder Scanner（Planned）", "Background Job", "每日掃描到期前 3 日至逾期後 3 日的未完成 Task，建立不重複的提醒工作")
+            Component(reminderSender, "Task Reminder Sender（Planned）", "Background Worker", "單封寄送、重試、寄送結果與告警記錄")
         }
 
         Boundary(infrastructureLayer, "Infrastructure Layer", "Infrastructure") {
             Component(persistence, "資料存取與交易", "Repositories / Unit of Work", "封裝查詢、分頁、Optimistic Concurrency、交易與稽核寫入")
-            Component(emailGateway, "Email Gateway", "SMTP Adapter", "隔離驗證信內容與 Gmail SMTP 呼叫")
+            Component(emailGateway, "Email Gateway", "SMTP Adapter", "隔離驗證信與 Planned Task 到期提醒的 Gmail SMTP 呼叫")
         }
     }
 
     ContainerDb(database, "應用程式資料庫", "SQL Server", "保存系統與稽核資料")
 
-    System_Ext(emailService, "Google Gmail SMTP", "寄送帳號驗證信")
+    System_Ext(emailService, "Google Gmail SMTP", "寄送帳號驗證信與 Planned Task 到期提醒")
 
     Rel(authController, identityService, "執行帳號使用案例")
     Rel(userControllers, identityService, "執行使用者使用案例")
@@ -122,8 +124,12 @@ C4Component
     Rel(identityService, persistence, "查詢與保存")
     Rel(projectService, persistence, "查詢與交易")
     Rel(taskService, persistence, "查詢與交易")
+    Rel(reminderScanner, persistence, "掃描 Task 並建立提醒紀錄（Planned）")
+    Rel(reminderScanner, reminderSender, "交付單封寄送工作（Planned）")
+    Rel(reminderSender, persistence, "claim、更新寄送與重試狀態（Planned）")
 
     Rel(identityService, emailGateway, "要求寄送驗證信")
+    Rel(reminderSender, emailGateway, "要求寄送 Task 到期提醒（Planned）")
 
     Rel(persistence, database, "執行參數化查詢與交易", "SQL/TLS")
     Rel(emailGateway, emailService, "寄送信件", "SMTP/TLS")
@@ -141,9 +147,9 @@ C4Component
 
     Container_Boundary(webBoundary, "前端網站（Vue 3 SPA）") {
         Component(authViews, "帳號與驗證畫面", "Vue Views", "SignIn、SignUp、EmailVerification、ResendVerification")
-        Component(userViews, "使用者管理畫面", "Vue Views", "UserList、UserSetting")
-        Component(projectViews, "專案管理畫面", "Vue Views", "ProjectList、ProjectDetail")
-        Component(taskViews, "Task 與留言畫面", "Vue Views", "TaskItemList、TaskItemDetail、TaskItemForm、BatchStatusDialog")
+        Component(userViews, "使用者與偏好畫面", "Vue Views", "UserList、UserDetail、Settings")
+        Component(projectViews, "專案管理畫面", "Vue Views", "ProjectList、ProjectDetail、ProjectForm")
+        Component(taskViews, "Task 與留言畫面", "Vue Views", "TaskList、TaskDetail、TaskForm")
     }
 
     Container_Boundary(apiBoundary, "後端 API（ASP.NET Core Web API）") {
@@ -172,4 +178,4 @@ C4Component
 - 前端的按鈕顯示與 Disabled 狀態只改善操作體驗，所有授權與狀態轉換仍由後端重新驗證。
 - Task 批次更新由應用服務建立單一交易邊界，任一項失敗即整批不更新。
 - Project 與 Task 更新透過版本欄位處理 Optimistic Concurrency，衝突時回傳 HTTP 409。
-- Email 僅用於 Day3 明確要求的帳號驗證；本圖未自行加入 Task 到期提醒或背景排程。
+- Email 驗證已有現行實作。Task 到期提醒的 Scanner、Sender、提醒唯一紀錄、retry 與告警依 `ImplementationBacklog.md` 標示為 Planned，尚未實作；圖中標有 `Planned` 的元件不得當作現行 runtime 元件。
