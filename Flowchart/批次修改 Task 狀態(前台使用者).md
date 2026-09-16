@@ -13,7 +13,7 @@ flowchart TB
     confirmBatch -->|否| batchStart
     needConfirmation -->|否| validateBatch[後端逐筆驗證]
     confirmBatch -->|是| validateBatch
-    validateBatch --> batchValid{權限、指派關係與狀態轉換都有效？}
+    validateBatch --> batchValid{權限、指派關係、rowVersion 與目標狀態值都有效？}
     batchValid -->|否| rollbackBatch[全部不更新並顯示原因]
     batchValid -->|是| updateBatch[以單一交易更新全部 Task]
     updateBatch --> batchSucceeded{交易成功？}
@@ -22,4 +22,4 @@ flowchart TB
     refreshBatch --> batchFinished([顯示成功更新筆數])
 ```
 
-批次更新不能成功一半、失敗一半。後端應在同一個交易中驗證並更新所有 Task，任何一筆失敗就全部回復原狀。
+批次更新不能成功一半、失敗一半。後端應在同一個交易中驗證並更新所有 Task，任何一筆失敗就全部回復原狀。`Pending`、`InProgress`、`Blocked`、`Completed` 四種狀態允許任意互轉，也允許更新為相同狀態；不會因 source→target 組合而拒絕。

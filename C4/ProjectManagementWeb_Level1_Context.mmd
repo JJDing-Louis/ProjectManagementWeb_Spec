@@ -7,12 +7,12 @@ C4Context
     Person(admin, "Admin", "管理使用者、系統角色及全部專案資料")
 
     System(myWorkItem, "My Work Item", "公司內部的專案、成員、Task Item 與留言管理系統")
-    System_Ext(emailService, "Google Gmail SMTP", "寄送帳號驗證信，並在 Planned 階段寄送 Task 到期提醒")
+    System_Ext(emailService, "Google Gmail SMTP", "寄送帳號驗證信與 Task 到期提醒")
 
     Rel(visitor, myWorkItem, "註冊、驗證 Email 與登入", "HTTPS")
     Rel(member, myWorkItem, "查看專案並處理工作", "HTTPS")
     Rel(administrator, myWorkItem, "管理專案與工作", "HTTPS")
     Rel(admin, myWorkItem, "管理系統與權限", "HTTPS")
-    Rel(myWorkItem, emailService, "寄送帳號驗證信與 Planned Task 到期提醒", "SMTP")
+    Rel(myWorkItem, emailService, "寄送帳號驗證信與 Task 到期提醒", "SMTP")
 
     UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")

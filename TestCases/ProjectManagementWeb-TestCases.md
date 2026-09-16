@@ -2,7 +2,7 @@
 
 ## 1. 文件資訊
 
-- **產出日期**：2026-09-07；**最後更新**：2026-09-13
+- **產出日期**：2026-09-07；**最後更新**：2026-09-16
 - **需求來源**：`UserStory.md`、`Flowchart/`、`Schema.md`、`StaticData.md`、`UIMock/`、Backend API／EF Core migrations／現有測試、Frontend routes／views／services／現有測試
 - **測試範圍**：帳號與驗證、授權與 Session、使用者管理、偏好、專案與成員、Task 清單與異動、留言、到期提醒、SQL 完整性、UI／E2E
 - **狀態定義**：`Ready` 表示已有可測介面；`Planned` 表示需求已定義但功能尚未實作，或因契約缺口尚不能執行。
@@ -20,11 +20,11 @@
 | CON-004 | Project Role 基數 | 舊 Schema／草圖／流程看似單一角色 | 成員可有多個 Project Roles；修改時完整取代且至少一個 | 已更新 User Story、Flowchart、Schema 與 UI 草圖契約 |
 | CON-005 | Task 清單批次刪除 | 舊草圖暗示 checkbox 支援批次刪除 | checkbox 只供批次改狀態；刪除為後台每列單筆軟刪除 | 已更新 `UIMock/README.md` |
 | CON-006 | 批次目標狀態初始值 | User Story 要求先選狀態，UI 預設 `InProgress` | 保留 `InProgress` 預設值；只在未選 Task 時停用確認 | 已更新 User Story、Flowchart 與 UI 草圖契約 |
-| CON-007 | Project 表單限制 | Frontend 與 Backend／DB 不一致 | Name trim 後 1–200 字；Description 選填且最多 4000 字 | Frontend 欄位限制已對齊；Backend 邊界驗證尚待對齊 |
-| CON-008 | Task Description 必填 | Frontend 必填，Backend／DB 允許空值 | Description 選填；有值時 trim 後最多 8000 字 | Frontend 必填與長度限制已對齊；Backend 8000 字邊界驗證尚待對齊 |
+| CON-007 | Project 表單限制 | Frontend 與 Backend／DB 不一致 | Name trim 後 1–200 字；Description 選填且最多 4000 字 | Frontend、Backend 與 DB 欄位限制已對齊並通過測試 |
+| CON-008 | Task Description 必填 | Frontend 必填，Backend／DB 允許空值 | Description 選填；有值時 trim 後最多 8000 字 | 前後端與 Backend 整合測試均已對齊 |
 | CON-009 | 使用者設定範圍 | 舊草圖將個資、系統角色與專案角色放在同頁 | Settings 只管理語言與批次確認偏好；系統角色／啟用狀態在 User Detail；Project Roles 在 Project Detail | 已更新 User Story、C4 與 UI 草圖契約 |
 | CON-010 | Schema 主鍵與資料模型 | 舊 Schema 為字串主鍵與明文式 Password | 以 EF migrations／model snapshot 為正式來源，使用 Identity GUID、`PasswordHash`、獨立關聯與 rowversion | `Schema.md` 已依現行模型改寫 |
-| CON-011 | C4 Email 範圍 | C4 只繪出驗證信 | 到期提醒需包含 Scanner、Sender、唯一寄送紀錄、retry 與告警，未完成前一律標為 Planned | User Story、提醒 Flowchart、Backlog、彙整版與五張獨立 C4 圖已對齊；營運參數、Backend、Schema 與自動化測試尚待完成 |
+| CON-011 | C4 Email 範圍 | C4 只繪出驗證信 | 到期提醒需包含 Scanner、Sender、唯一寄送紀錄、retry 與告警 | User Story、提醒 Flowchart、Backlog、彙整版與五張獨立 C4 圖已依現行 Hangfire／SQL Server／SMTP 實作對齊 |
 | CON-012 | Project 清單搜尋方式 | 舊草圖為多欄位查詢與 Owner 篩選 | 單一 search 查 Code／Name／Description，另有 status；無 Owner filter | 已更新 User Story 與 UI 草圖契約 |
 | CON-013 | Task 詳情操作型態 | 舊草圖在詳情頁直接 Confirm／Cancel | Task Detail 為詳情與留言；修改導向 `/admin/projects/{projectId}/task-items/{taskId}/edit` | 已更新 User Story、Flowchart、C4 與 UI 草圖契約 |
 
@@ -32,20 +32,20 @@
 
 | ID | 已確認規則 | 待完成工作 | 驗收重點 | 狀態 |
 |---|---|---|---|---|
-| GAP-001 | 顯示名稱必填，trim 後為 1–100 字。 | Frontend 加上相同必填、trim 與 `maxlength=100` 規則；Backend 維持相同邊界與欄位錯誤。 | 0/1/100/101 字與純空白；UI/API 接受及拒絕界線一致。 | 已決議，待實作對齊 |
-| GAP-002 | Email 驗證 Token 自簽發起有效 3 分鐘；重寄冷卻 60 秒，且每帳號及每 IP 於滾動 60 分鐘內最多 5 次。帳號／冷卻受限仍回 200 一般訊息，IP 濫用回 `429 rate_limited`；不存在帳號仍計入 IP。重寄成功後舊 Token 立即失效；成功使用過的 Token 再用必須失敗。 | Backend 建立可辨識最新版 Token、簽發時間、已使用狀態與帳號綁定的版本／nonce 或等效機制，並加入帳號及 IP 重寄限制。 | 驗證 3 分鐘邊界、60 秒冷卻、滾動 60 分鐘第 5／6 次、兩類 response、重寄前後 Token、重放與跨帳號攻擊；受限請求不得使現有 Token 失效。 | 已決議，待實作 |
-| GAP-003 | 登入失敗不鎖定帳號；同一帳號或 IP 在滾動 15 分鐘內第 5 次失敗起回 `429 rate_limited`，本期不做 CAPTCHA，並保留安全稽核。只信任 allowlist reverse proxy 提供的 forwarded IP；多執行個體共用限流計數。 | 保留現行不累計帳號鎖定的密碼檢查；新增帳號與 IP rate limit、可信 proxy 設定、共享計數、一般化錯誤與安全稽核。 | 第 1–4 次失敗為 401；第 5 次及限制視窗內後續請求為 429；偽造 forwarded header 無效；跨 instance 仍共用門檻；視窗結束後正確密碼可登入。 | 部分已對齊；rate limit 與稽核待實作 |
-| GAP-004 | Project 的 `Pending／Active／Completed／Archived` 目前允許任意互轉。 | User Story、API contract、Domain 與測試統一採無狀態轉換限制。 | 覆蓋 4×4 組合，包含更新為相同狀態。 | Backend 已對齊；待同步文件與補測試 |
-| GAP-005 | Task 的 `Pending／InProgress／Blocked／Completed` 目前允許任意互轉。 | Flowchart 移除「可能因狀態轉換無效而拒絕」的暗示；Backend 與測試維持 4×4。 | 單筆、被指派者更新及批次更新皆覆蓋 4×4，包含相同狀態。 | Backend 已對齊；待同步文件與補測試 |
-| GAP-006 | Project Owner 必須是已啟用、Email 已驗證，且系統角色恰為 `Administrator` 的帳號；`Admin`、`User`、`Viewer` 均不得擔任。修改 Owner 時還必須已是該 Project 成員。 | Backend 建立與修改 Project 都檢查 `IsEnabled=true`、`EmailConfirmed=true`、system role=`Administrator`；Frontend Owner 候選清單套用相同條件。 | 不存在、停用、未驗證、非 Administrator，以及修改時非成員皆拒絕，且不建立 Project／不移交 Owner。 | 已決議，待實作 |
-| GAP-007 | UI checkbox 可選超過 10 筆，但單次批次狀態更新最多只能送出 10 筆。 | UI 選取超過 10 筆時保留選取，但停用送出並提示上限；Backend 對 11 筆以上回 `400 validation_error`，不得只取前 10 筆。 | 測 0/1/10/11 筆；11 筆時整批不更新，10 筆仍維持單一交易。 | 已決議，待實作 |
-| GAP-008 | 同時符合「無權限」與「資源不存在」時優先回 `403`，避免洩漏資源存在性。 | 所有 Project-scoped Service/API 統一先檢查功能與資料範圍授權，再在已授權範圍內判斷 `404`。 | 無權＋存在、無權＋不存在皆為 403；有權＋不存在才是 404。 | 已決議，待全面盤點 |
-| GAP-009 | `Projects.DeletedAt` 保留作為軟刪除；只有 `Administrator` 與 `Admin` 可刪除。刪除必須帶最新 rowVersion，衝突回 409 `concurrency_conflict`；記錄 `DeletedByAccountId` 與 AuditLog，FK 採 NoAction。本期不提供還原或永久刪除，子資料從一般查詢隱藏但不實體刪除。 | 補 Project delete User Story、API、UI、`DeletedByAccountId` nullable FK、rowVersion、權限與關聯查詢契約；現行 `DeletedAt` 與 query filter 保留。 | 允許角色、403 優先序、404、409、刪除者、時間、稽核、無還原／永久刪除入口，以及子資料保存。 | 已決議，待實作 |
-| GAP-010 | `Accounts.NormalizedEmail` 改為 DB `NOT NULL`，並建立不帶 filter 的 UNIQUE index；重複時 API 回 `409 duplicate_email` 且包含 `errors.email`。Migration 發現 NULL／重複髒資料時 fail-fast，由人工修正後重跑，不自動合併或刪除帳號。 | 增加 migration 前置檢查，再調整 nullability 與 UNIQUE index；捕捉並行 UNIQUE 違規並映射固定 Problem Details。 | 大小寫正規化、並行註冊、NULL、髒資料 fail-fast、人工修正後重跑與固定 409 契約。 | 已決議，待 migration 與測試 |
-| GAP-011 | `RefreshTokens.ReplacedByTokenId` 補上 nullable self-referencing Foreign Key，並設定 `.OnDelete(DeleteBehavior.NoAction)`。 | 補 EF mapping 與 migration；正常生命週期只撤銷 Token，不實體刪除；歷史清理由獨立 retention 流程處理。 | 不存在的 replacement ID 被 DB 拒絕；合法 rotation chain 可保存；被參照 Token 不得因 cascade 消失。 | 已決議，待 migration 與測試 |
-| GAP-012 | Task 到期提醒依 Project 必填的 IANA `TimeZoneId`，每天 Project 當地時間 08:00 執行；同一 Project 當地日期只執行一次，當日服務恢復即補跑。初次失敗後最多重試 3 次，間隔 5、15、60 分鐘；最終告警寫 DB 與結構化 log，本期不做管理 UI。 | Project 補 `TimeZoneId`；既有資料由部署必填的 migration 預設 IANA timezone 回填，新 Project 必須明確指定；實作 Scanner、Sender、claim、retry、告警與測試。 | 多時區 08:00、DST 日期冪等、當日補跑、3 次重試、DB／log 告警、去重、多 worker、Task 完成與帳號失效。 | 已決議，待實作 |
-| GAP-013 | Backend 核心 Service/API 授權、交易與並行路徑必須補自動化測試。 | 優先補角色矩陣、批次 rollback、rowversion、Owner、成員角色、token rotation、軟刪除及 audit/history。 | 使用實際 SQL Server 驗證 relational constraint、transaction 與 concurrency；不得以 EF InMemory 取代。 | 已決議，待實作 |
-| GAP-014 | Frontend 必須補 Task 清單、批次、留言、角色與主要錯誤流程的 Component／E2E 測試。 | 補 URL query／返回狀態、checkbox、10 筆上限、偏好、留言、角色複選及 403/409/422 UX。 | Vitest 驗證元件行為；Playwright 驗證前後端整合，不只檢查元素存在。 | 已決議，待實作 |
+| GAP-001 | 顯示名稱必填，trim 後為 1–100 字。 | Frontend 加上相同必填、trim 與 `maxlength=100` 規則；Backend 維持相同邊界與欄位錯誤。 | 0/1/100/101 字與純空白；UI/API 接受及拒絕界線一致。 | 已完成並通過 Unit／API／SQL／UI 自動化測試 |
+| GAP-002 | Email 驗證 Token 自簽發起有效 3 分鐘；重寄冷卻 60 秒，且每帳號及每 IP 於滾動 60 分鐘內最多 5 次。帳號／冷卻受限仍回 200 一般訊息，IP 濫用回 `429 rate_limited`；不存在帳號仍計入 IP。重寄成功後舊 Token 立即失效；成功使用過的 Token 再用必須失敗。 | Backend 以 SHA-256 Token hash、啟用／使用／失效時間與帳號綁定辨識最新版 Token；重寄嘗試以帳號及雜湊來源 IP 寫入 SQL Server 共享限制。 | 驗證 3 分鐘邊界、60 秒冷卻、滾動 60 分鐘第 5／6 次、兩類 response、重寄前後 Token、重放與跨帳號攻擊；受限或寄送失敗請求不得使現有 Token 失效。 | 已完成並通過 Unit／API／SQL／UI／E2E 自動化測試 |
+| GAP-003 | 登入失敗不鎖定帳號；同一帳號或 IP 在滾動 15 分鐘內第 5 次失敗起回 `429 rate_limited`，本期不做 CAPTCHA，並保留安全稽核。只信任 allowlist reverse proxy 提供的 forwarded IP；多執行個體共用限流計數。 | 保留現行不累計帳號鎖定的密碼檢查；新增帳號與 IP rate limit、可信 proxy 設定、共享計數、一般化錯誤與安全稽核。 | 第 1–4 次失敗為 401；第 5 次及限制視窗內後續請求為 429；偽造 forwarded header 無效；跨 instance 仍共用門檻；視窗結束後正確密碼可登入。 | 已完成並通過 API／SQL／設定／Log 自動化測試 |
+| GAP-004 | Project 的 `Pending／Active／Completed／Archived` 目前允許任意互轉。 | User Story、API contract、Domain 與測試統一採無狀態轉換限制。 | 覆蓋 4×4 組合，包含更新為相同狀態。 | 已完成並通過 Domain／API／SQL 自動化測試 |
+| GAP-005 | Task 的 `Pending／InProgress／Blocked／Completed` 目前允許任意互轉。 | Flowchart 移除「可能因狀態轉換無效而拒絕」的暗示；Backend 與測試維持 4×4。 | 單筆完整修改、被指派者修改及批次更新皆覆蓋 4×4，包含相同狀態。 | 已完成並通過 Domain／API／SQL 自動化測試 |
+| GAP-006 | Project Owner 必須是已啟用、Email 已驗證，且系統角色恰為 `Administrator` 的帳號；`Admin`、`User`、`Viewer` 均不得擔任。修改 Owner 時還必須已是該 Project 成員。 | Backend 建立與修改 Project 都檢查 `IsEnabled=true`、`EmailConfirmed=true`、system role=`Administrator`；Frontend Owner 候選清單套用相同條件。 | 不存在、停用、未驗證、非 Administrator，以及修改時非成員皆拒絕，且不建立 Project／不移交 Owner。 | 已完成並通過 Backend／Frontend 自動化測試 |
+| GAP-007 | UI checkbox 可選超過 10 筆，但單次批次狀態更新最多只能送出 10 筆。 | UI 選取超過 10 筆時保留選取，但停用送出並提示上限；Backend 對 11 筆以上回 `400 validation_error`，不得只取前 10 筆。 | 測 0/1/10/11 筆；11 筆時整批不更新，10 筆仍維持單一交易。 | 已完成並通過 Backend／Frontend 自動化測試 |
+| GAP-008 | 同時符合「無權限」與「資源不存在」時優先回 `403`，避免洩漏資源存在性。 | 所有 Project-scoped Service/API 統一先檢查功能與資料範圍授權，再在已授權範圍內判斷 `404`。 | 無權＋存在、無權＋不存在皆為 403；有權＋不存在才是 404。 | 已完成 Project／Member／Task／Comment 全 endpoint 盤點並通過整合測試 |
+| GAP-009 | `Projects.DeletedAt` 保留作為軟刪除；只有 `Administrator` 與 `Admin` 可刪除。刪除必須帶最新 rowVersion，衝突回 409 `concurrency_conflict`；記錄 `DeletedByAccountId` 與 AuditLog，FK 採 NoAction。本期不提供還原或永久刪除，子資料從一般查詢隱藏但不實體刪除。 | 補 Project delete User Story、API、UI、`DeletedByAccountId` nullable FK、rowVersion、權限與關聯查詢契約；現行 `DeletedAt` 與 query filter 保留。 | 允許角色、403 優先序、404、409、刪除者、時間、稽核、無還原／永久刪除入口，以及子資料保存。 | 已完成並通過 API／SQL／UI 自動化測試 |
+| GAP-010 | `Accounts.NormalizedEmail` 改為 DB `NOT NULL`，並建立不帶 filter 的 UNIQUE index；重複時 API 回 `409 duplicate_email` 且包含 `errors.email`。Migration 發現 NULL／重複髒資料時 fail-fast，由人工修正後重跑，不自動合併或刪除帳號。 | 增加 migration 前置檢查，再調整 nullability 與 UNIQUE index；捕捉並行 UNIQUE 違規並映射固定 Problem Details。 | 大小寫正規化、並行註冊、NULL、髒資料 fail-fast、人工修正後重跑與固定 409 契約。 | 已完成並通過 API／SQL／migration 自動化測試 |
+| GAP-011 | `RefreshTokens.ReplacedByTokenId` 補上 nullable self-referencing Foreign Key，並設定 `.OnDelete(DeleteBehavior.NoAction)`。 | 補 EF mapping 與 migration；正常生命週期只撤銷 Token，不實體刪除；歷史清理由獨立 retention 流程處理。 | 不存在的 replacement ID 被 DB 拒絕；合法 rotation chain 可保存；被參照 Token 不得因 cascade 消失。 | 已完成並通過 EF model／SQL 自動化測試 |
+| GAP-012 | Task 到期提醒依 Project 必填的 IANA `TimeZoneId`，每天 Project 當地時間 08:00 執行；同一 Project 當地日期只執行一次，當日服務恢復即補跑。初次失敗後最多重試 3 次，間隔 5、15、60 分鐘；最終告警寫 DB 與結構化 log，本期不做管理 UI。 | Project 補 `TimeZoneId`；既有資料由部署必填的 migration 預設 IANA timezone 回填，新 Project 必須明確指定；實作 Scanner、Sender、claim、retry、告警與測試。 | 多時區 08:00、DST 日期冪等、當日補跑、3 次重試、DB／log 告警、去重、多 worker、Task 完成與帳號失效。 | 已完成並通過 Hangfire／Service／SQL／Log 自動化與隔離部署啟動測試 |
+| GAP-013 | Backend 核心 Service/API 授權、交易與並行路徑必須補自動化測試。 | 優先補角色矩陣、批次 rollback、rowversion、Owner、成員角色、token rotation、軟刪除及 audit/history。 | 使用實際 SQL Server 驗證 relational constraint、transaction 與 concurrency；不得以 EF InMemory 取代。 | 已完成並通過 Unit 61／Integration 98 自動化測試 |
+| GAP-014 | Frontend 必須補 Task 清單、批次、留言、角色與主要錯誤流程的 Component／E2E 測試。 | 補 URL query／返回狀態、checkbox、10 筆上限、偏好、留言、角色複選及 403/409/422 UX。 | Vitest 驗證元件行為；Playwright 驗證前後端整合，不只檢查元素存在。 | 已完成並通過 Vitest 75／隔離 Playwright 22 自動化測試 |
 | GAP-015 | Frontend `AGENTS.md` 必須更新為目前已完成 Vue 3 初始化且已串接 Backend 的現況。 | 移除「尚未建立前端專案」敘述，保留現行 Vue 3、TypeScript、Vite、Pinia、Router、Vitest 與 Playwright 規範。 | 文件敘述與 `package.json`、目錄、route、service 及測試工具一致。 | 已完成 |
 
 ### 2.3 已確認的 OPEN 決議
@@ -72,6 +72,7 @@
 | OPEN-013 | Email 重寄上限採滾動 60 分鐘；帳號／60 秒冷卻限制回 200 一般訊息，IP 濫用回 `429 rate_limited`；不存在帳號仍計入 IP。 |
 | OPEN-014 | Project 軟刪除必須帶最新 rowVersion；stale rowVersion 回 409 `concurrency_conflict`。 |
 | OPEN-015 | NormalizedEmail migration 發現 NULL／重複資料時 fail-fast，由人工修正後重跑；不得自動合併或刪除帳號。 |
+| OPEN-016 | 一般 User／Viewer 對任何非本人 userId（不論存在與否）皆回 403，避免洩漏帳號存在性；只有具 `accounts.read` 的管理者通過授權後，對不存在 userId 回 404 `not_found`。 |
 
 ## 3. 需求代碼
 
@@ -106,16 +107,16 @@
 - **測試步驟**：1. 取得 CSRF token。2. 送出符合密碼規則且確認密碼一致的註冊資料。3. 查詢 Accounts、AccountRoles、UserPreferences、EmailMessages。
 - **預期結果**：201；回傳 accountId 與 `verificationEmailSent=true`；角色為 Viewer、未驗證、啟用；密碼不以原文儲存；建立預設偏好與成功郵件紀錄。
 - **資料後置狀態**：新增一帳號、一 Viewer 關聯、一偏好與一寄信紀錄。
-- **現有自動化覆蓋**：部分：`ApiSurfaceTests` 只測欄位錯誤；`SignUpView.spec.ts` 只 mock 成功導頁。
+- **現有自動化覆蓋**：完整：`AuthApiTests.註冊有效帳號應建立Viewer偏好與成功郵件紀錄` 已以真實 SQL Server 與 fake Email gateway 通過 201、Viewer、未驗證／啟用、PasswordHash、偏好及成功郵件紀錄；`app.spec.ts.SMTP失敗仍保留新Viewer且重寄不洩漏帳號存在性` 已於 2026-09-16 在 desktop／mobile 以真實 API 驗證完整註冊表單、建立後導向、一般化寄信失敗提示及新 Viewer 可登入唯讀。
 
 #### TC-E-AUTH-002 註冊欄位邊界
-- **類型與優先級**：Edge／P1；**測試層級**：Unit、API、UI；**狀態**：Planned（GAP-001）
+- **類型與優先級**：Edge／P1；**測試層級**：Unit、API、UI；**狀態**：Ready
 - **對應需求**：AUTH；`RegistrationRules`
 - **前置條件**：無。
 - **測試步驟**：分別送出帳號 256/257 字、顯示名稱 trim 後 0/1/100/101 字與純空白、密碼 9/10 字，以及合法帳號字元 `-._@+`；同步檢查 UI 的 required、trim 與 `maxlength=100`。
 - **預期結果**：顯示名稱 1/100 字可送出，0/101 字與純空白在 UI 阻擋且 API 回 400 欄位錯誤；其他欄位上限內通過、超界拒絕；UI 與 API 邊界一致並保留失敗輸入。
 - **資料後置狀態**：失敗組不新增帳號；成功組依個案清理。
-- **現有自動化覆蓋**：部分：`RegistrationValidatorTests` 僅測一般有效／無效值；Frontend 顯示名稱目前未設定 `maxlength=100`。
+- **現有自動化覆蓋**：完整：`RegistrationValidatorTests.註冊欄位邊界應符合規格` 覆蓋 9 組 Unit 邊界；`AuthApiTests.註冊Api應與Unit及Frontend使用相同欄位邊界且拒絕值不建立資料` 已於 2026-09-15 以真實 SQL Server 驗證帳號 256／257 字、完整合法符號、顯示名稱空白／1／100／101 字與密碼 9／10 字，拒絕值回欄位錯誤且不建立 Auth 資料；`signUpView.spec.ts` 驗證顯示名稱 required、trim model 與 `maxlength=100`。
 
 #### TC-ERR-AUTH-003 註冊空白與弱密碼
 - **類型與優先級**：Error／P0；**測試層級**：Unit、API、UI；**狀態**：Ready
@@ -133,7 +134,7 @@
 - **測試步驟**：1. 以相同帳號、不同 Email 註冊。2. 以不同帳號、相同 Email 註冊。3. 模擬兩個並行註冊。
 - **預期結果**：應用層拒絕並提供一般欄位錯誤；同 normalized username 不可重複。Email DB 級競態見 TC-SQL-007。
 - **資料後置狀態**：僅保留原帳號，不產生孤兒角色／偏好。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`AuthApiTests.重複帳號或Email應回欄位錯誤且不建立孤兒資料` 通過相同 normalized account／Email、欄位錯誤及無孤兒角色／偏好／郵件；並行註冊競態由 TC-SQL-007 的真實 SQL Server UNIQUE constraint 與固定 409 契約合併驗證。
 
 #### TC-ERR-AUTH-005 註冊缺少或錯誤 CSRF
 - **類型與優先級**：Security／P0；**測試層級**：API；**狀態**：Ready
@@ -142,7 +143,7 @@
 - **測試步驟**：分別省略 header、只送 header、送錯 token 呼叫 register/login/refresh/logout/confirm/resend。
 - **預期結果**：400；任何帳號、token 或資料均不異動。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：部分：`ApiSurfaceTests.註冊缺少CsrfToken時應拒絕請求`。
+- **現有自動化覆蓋**：完整（Backend API）：`AuthApiTests.Auth寫入端點遇無效Csrf配對應全部拒絕且不異動資料` 已於 2026-09-13 合併驗證 register／login／refresh／logout／confirm／resend 六個 endpoint 的缺少 header、僅 header、錯誤 token，共 18 條路徑全數回 400，且 Users、UserPreferences、RefreshTokens、EmailMessages 筆數不變；`ApiSurfaceTests.註冊缺少CsrfToken時應拒絕請求` 提供基線補充。
 
 #### TC-ST-AUTH-006 SMTP 失敗但帳號保留
 - **類型與優先級**：State／P0；**測試層級**：Service、API、SQL、UI；**狀態**：Ready
@@ -151,7 +152,7 @@
 - **測試步驟**：完成有效註冊並檢查 response、DB 與驗證頁。
 - **預期結果**：201、`verificationEmailSent=false`；帳號仍存在且為 Viewer；EmailMessages 為 Failed 且保留錯誤；UI 顯示重寄入口，不宣稱已寄出。
 - **資料後置狀態**：帳號可供登入；新增失敗郵件紀錄。
-- **現有自動化覆蓋**：部分：`signUpView.spec.ts`、`verifyEmailView.spec.ts` 只測前端狀態。
+- **現有自動化覆蓋**：完整：`AuthApiTests.EmailGateway失敗時註冊仍應保留Viewer並記錄失敗郵件` 已以真實 SQL Server 與失敗 fake gateway 通過 Backend API／SQL；`signUpView.spec.ts`、`verifyEmailView.spec.ts` 覆蓋前端狀態；`app.spec.ts` 已於 2026-09-15 在隔離 desktop／mobile 真實瀏覽器確認 SMTP 停用時仍建立帳號、進入驗證頁、保留重寄入口且未宣稱寄送成功，連續兩輪通過。
 
 #### TC-F-AUTH-007 未驗證帳號以 Viewer 能力登入
 - **類型與優先級**：Functional／P0；**測試層級**：API、E2E；**狀態**：Ready
@@ -160,7 +161,7 @@
 - **測試步驟**：登入後呼叫 `/auth/me`，再嘗試讀取及寫入業務 API。
 - **預期結果**：登入成功；有效 role=Viewer，只含 Viewer functions；可讀所屬資料，所有寫入被 403 拒絕。
 - **資料後置狀態**：新增 refresh token；業務資料不變。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`AuthApiTests.未驗證Administrator登入後應降為Viewer且禁止寫入` 已通過登入、`/auth/me` Viewer role／functions、可讀 Project 與寫入 403；`app.spec.ts` 已於 2026-09-15 在隔離 desktop／mobile 真實瀏覽器以新註冊未驗證帳號登入，確認可進 Project 清單且無新增 Project 入口，連續兩輪通過。
 
 #### TC-ERR-AUTH-008 錯誤帳密與停用帳號使用相同失敗語意
 - **類型與優先級**：Security／P0；**測試層級**：API、UI；**狀態**：Ready
@@ -169,7 +170,7 @@
 - **測試步驟**：1. 以不存在帳號、錯密碼、停用帳號登入。2. 對有效帳號連續送出錯誤密碼。3. 隨後以正確密碼登入。
 - **預期結果**：失敗皆回 401 `invalid_credentials` 與相同一般訊息；不洩漏帳號存在或停用狀態；錯誤登入不鎖定帳號、不停用帳號，之後正確密碼仍可登入。
 - **資料後置狀態**：失敗時不新增 refresh token，且不因失敗次數改變帳號啟用／鎖定狀態；最後成功登入才新增 token。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`AuthApiTests.無效帳密與停用帳號應使用相同錯誤且不得鎖定有效帳號` 已通過不存在帳號、連續四次錯誤密碼、停用帳號的相同 401 `invalid_credentials`，並驗證失敗不新增 token、不鎖定且恢復啟用後可登入；`signInView.spec.ts` 已於 2026-09-15 驗證兩種原因只顯示相同一般化錯誤且不洩漏停用狀態。
 
 #### TC-ST-AUTH-009 Email 驗證成功但角色不自動提升
 - **類型與優先級**：State／P0；**測試層級**：API、SQL、UI；**狀態**：Ready
@@ -178,16 +179,16 @@
 - **測試步驟**：呼叫 confirm，重新登入並讀取 `/auth/me` 與 AccountRoles。
 - **預期結果**：confirm 200 true、EmailConfirmed=true；系統角色仍是 Viewer，沒有自動新增 User 角色。
 - **資料後置狀態**：僅驗證狀態改變。
-- **現有自動化覆蓋**：無；`VerifyEmailView` 僅顯示此語意。
+- **現有自動化覆蓋**：完整：`AuthApiTests.Email驗證成功後應維持Viewer且不自動提升角色` 已以真實 SQL Server 通過 confirm、EmailConfirmed、AccountRoles 仍為 Viewer，以及重新登入後 `/auth/me` 仍為 Viewer；`verifyEmailView.spec.ts` 已於 2026-09-15 驗證成功狀態明確告知帳號仍維持 Viewer。
 
 #### TC-ERR-AUTH-010 無效／變造／過期 Email token
-- **類型與優先級**：Error／P0；**測試層級**：Unit、API、UI；**狀態**：Planned（GAP-002）
+- **類型與優先級**：Error／P0；**測試層級**：Unit、API、UI；**狀態**：Ready
 - **對應需求**：AUTH；Email 驗證 Flowchart
 - **前置條件**：固定 TimeProvider；準備亂碼、變造 Token 與簽發時間已知的有效 Token。
 - **測試步驟**：分別在簽發後 2:59.999、3:00.000，以及超過 3 分鐘時呼叫 confirm；另送亂碼與變造 Token。
 - **預期結果**：3 分鐘以前有效；自簽發滿 3 分鐘起，以及亂碼／變造 Token 均回 400 `invalid_email_token`，顯示不洩漏細節的失效訊息並提供重寄路徑。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：無；目前尚未落實精確 3 分鐘契約。
+- **現有自動化覆蓋**：完整：`DomainEntityTests.Email驗證Token應遵守三分鐘邊界與啟用使用失效生命週期` 驗證未啟用、2:59.999、3:00.000、已使用與已失效狀態；`AuthApiTests.Email驗證Token應在三分鐘前有效且自滿三分鐘起拒絕無效與變造值` 已於 2026-09-15 以固定 TimeProvider 與真實 SQL Server 通過精確邊界、亂碼與變造 Token；`app.spec.ts` 已在 desktop／mobile 真實瀏覽器通過一般化錯誤與重寄入口。
 
 #### TC-F-AUTH-011 重寄驗證信不洩漏帳號存在性
 - **類型與優先級**：Security／P1；**測試層級**：API、UI；**狀態**：Ready
@@ -196,7 +197,7 @@
 - **測試步驟**：對四類輸入呼叫 resend。
 - **預期結果**：對外均回 200 true 與相同 UI 訊息；只有未驗證且啟用帳號實際新增寄信紀錄。
 - **資料後置狀態**：符合條件者新增 EmailMessages，其餘不變。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`AuthApiTests.重寄驗證信應一律回成功且只寄給未驗證啟用帳號` 已通過未驗證啟用、已驗證、停用及不存在帳號均回 200 true，且只有符合條件者建立 EmailMessages 並呼叫 fake gateway；`resendVerificationView.spec.ts` 與 `app.spec.ts` 已於 2026-09-15 驗證既有／不存在帳號皆顯示相同的中英文非承諾式受理訊息，不洩漏帳號存在性。
 
 #### TC-F-AUTH-012 Refresh rotation 與舊 token family reuse
 - **類型與優先級**：Security／P0；**測試層級**：Service、API、SQL；**狀態**：Ready
@@ -205,7 +206,7 @@
 - **測試步驟**：1. refresh 一次。2. 驗證舊 token 被取代。3. 重用舊 token。4. 再用新 token。
 - **預期結果**：第一次成功並輪替；重用舊 token 回 401 `refresh_token_reuse` 且撤銷整個 family；新 token 也不可再用。
 - **資料後置狀態**：family 所有 token 均撤銷。
-- **現有自動化覆蓋**：部分：`DomainEntityTests` 只測 entity revoke；`mockServices.spec.ts` 測前端 single-flight。
+- **現有自動化覆蓋**：完整（Backend）：`AuthApiTests.Refresh輪替後重用舊Token應撤銷整個Family` 已於 2026-09-13 以真實 SQL Server 通過 rotation、舊 token reuse、整個 family 撤銷及新 token 失效；`DomainEntityTests` 與 `mockServices.spec.ts` 分別補充 entity revoke 與前端 single-flight。
 
 #### TC-ST-AUTH-013 Logout 撤銷 token 並清 Cookie
 - **類型與優先級**：State／P0；**測試層級**：API、SQL、UI；**狀態**：Ready
@@ -214,7 +215,7 @@
 - **測試步驟**：1. 有效 client 呼叫 logout，檢查 Set-Cookie／DB，再 refresh 與開受保護頁。2. 另外以缺少及未知 refresh cookie 呼叫 logout。
 - **預期結果**：三種請求皆為 204 且清除 `PMW-REFRESH` cookie；有效 token 被撤銷且後續 refresh 失敗；缺少或未知 token 採冪等成功、不建立或異動其他 token；UI 回登入頁。
 - **資料後置狀態**：有效 client 的 session 結束；缺少或未知 token 不影響其他 session；業務資料不變。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`AuthApiTests.Logout應撤銷有效Token並對缺少或未知Cookie保持冪等` 已以真實 SQL Server 通過有效 token 撤銷、清 Cookie、後續 refresh 失敗，以及缺少／未知 Cookie 的 204 與清 Cookie 冪等語意；`app.spec.ts` 已於 2026-09-15 在 desktop／mobile 驗證登出回登入頁及再次開啟受保護 route 仍需登入。
 
 #### TC-F-AUTH-014 Session restore 與同時 401 single-flight
 - **類型與優先級**：Functional／P0；**測試層級**：UI、E2E；**狀態**：Ready
@@ -223,52 +224,52 @@
 - **測試步驟**：重新整理；同時觸發多個需授權 request；觀察 network。
 - **預期結果**：只送一次 refresh；取得新 access token 後各原 request 最多重送一次；不形成 loop。
 - **資料後置狀態**：保持登入並完成 token rotation。
-- **現有自動化覆蓋**：完整（部分層級）：`mockServices.spec.ts` 三案例、`app.spec.ts` refresh E2E。
+- **現有自動化覆蓋**：完整：`mockServices.spec.ts` 合併驗證並行 restore single-flight、401 只 refresh／重送一次及 refresh 失敗清除 access token；`app.spec.ts` 已於 2026-09-15 在 desktop／mobile 真實瀏覽器驗證 Refresh Cookie 可於 reload 後恢復登入。
 
 #### TC-ERR-AUTH-015 重寄後舊 Email 驗證 Token 立即失效
-- **類型與優先級**：Security／P0；**測試層級**：Service、API、SQL；**狀態**：Planned（GAP-002）
+- **類型與優先級**：Security／P0；**測試層級**：Service、API、SQL；**狀態**：Ready
 - **對應需求**：AUTH；Email 驗證 Flowchart；GAP-002
 - **前置條件**：同一未驗證啟用帳號已取得 Token A；Backend 已實作可辨識最新版 Token 的版本／nonce 或等效機制。
 - **測試步驟**：1. 重寄並取得 Token B。2. 以 Token A 驗證。3. 以 Token B 驗證。
 - **預期結果**：Token A 在重寄完成後立即回 400 `invalid_email_token`；Token B 可成功驗證；回應不揭露失效原因細節。
 - **資料後置狀態**：帳號只由最新版 Token 驗證成功；Token A 無法再改變資料。
-- **現有自動化覆蓋**：無；目前 Identity Email Token 未綁定「最新一次重寄」版本，因此功能尚未實作。
+- **現有自動化覆蓋**：完整：`AuthApiTests.重寄成功應只保留最新版Token而寄送失敗不得使原Token失效` 已於 2026-09-15 以真實 SQL Server 驗證成功重寄後 Token A 固定 400、Token B 成功；同一測試亦驗證 SMTP 失敗只留安全 Log 且 Token A 保持有效。filtered UNIQUE index 保證同帳號同時最多一個有效 Token。
 
 #### TC-ERR-AUTH-016 已使用 Email 驗證 Token 的重放語意
-- **類型與優先級**：Security／P0；**測試層級**：Service、API、SQL；**狀態**：Planned（GAP-002、OPEN-007）
+- **類型與優先級**：Security／P0；**測試層級**：Service、API、SQL；**狀態**：Ready
 - **對應需求**：AUTH；GAP-002；OPEN-007
 - **前置條件**：未驗證啟用帳號持有目前最新版 Token。
 - **測試步驟**：1. 使用 Token 完成驗證。2. 以相同 Token 再次呼叫驗證端點。
 - **預期結果**：第一次成功；第二次回 400 `invalid_email_token`，不得視為冪等成功，且不洩漏 Token 已使用的細節。
 - **資料後置狀態**：帳號只產生一次有效驗證狀態轉換，重放不產生額外狀態或稽核異動。
-- **現有自動化覆蓋**：無；一次性使用狀態尚未實作。
+- **現有自動化覆蓋**：完整：`AuthApiTests.Email驗證Token成功使用後再次使用應回固定無效錯誤` 已於 2026-09-15 驗證第一次 200、第二次 `400 invalid_email_token`；`DomainEntityTests.Email驗證Token應遵守三分鐘邊界與啟用使用失效生命週期` 驗證 UsedAt 後不再為 active。
 
 #### TC-ERR-AUTH-017 Email 驗證 Token 不可跨帳號使用
-- **類型與優先級**：Security／P0；**測試層級**：Service、API；**狀態**：Planned（GAP-002、OPEN-007）
+- **類型與優先級**：Security／P0；**測試層級**：Service、API；**狀態**：Ready
 - **對應需求**：AUTH；Email 驗證 Token 的帳號綁定安全契約；OPEN-007
 - **前置條件**：未驗證帳號 A、B；Token A 為 A 的最新版 Token。
 - **測試步驟**：1. 以帳號 B 的 accountId 搭配 Token A 呼叫驗證端點。2. 再由帳號 A 使用 Token A。
 - **預期結果**：跨帳號請求回 400 `invalid_email_token` 且不揭露 Token 所屬帳號；攻擊請求不消耗 Token A，帳號 A 隨後仍可在 3 分鐘內成功驗證。
 - **資料後置狀態**：帳號 B 維持未驗證；帳號 A 只因自己的合法請求完成驗證。
-- **現有自動化覆蓋**：無；跨帳號失敗不消耗 Token 的狀態追蹤尚未實作。
+- **現有自動化覆蓋**：完整：`AuthApiTests.Email驗證Token跨帳號使用應失敗且原帳號仍可合法使用` 已於 2026-09-15 驗證 B 搭配 Token A 固定 400、不改變 B，且 A 隨後仍可用同一 Token 成功驗證。
 
 #### TC-ERR-AUTH-018 重寄驗證信冷卻與每小時上限
-- **類型與優先級**：Security／P0；**測試層級**：Service、API；**狀態**：Planned（GAP-002、OPEN-001、OPEN-013）
+- **類型與優先級**：Security／P0；**測試層級**：Service、API；**狀態**：Ready
 - **對應需求**：AUTH；GAP-002；OPEN-001；OPEN-013
 - **前置條件**：固定 TimeProvider；未驗證啟用帳號；可辨識相同／不同 IP。
 - **測試步驟**：1. 首次重寄。2. 在 59.999 秒及 60 秒重寄。3. 分別以相同帳號／不同 IP、不同帳號／相同 IP 累計滾動 60 分鐘內第 5 與第 6 次。4. 以不存在帳號累計 IP 次數。5. 視窗結束後再重寄。
 - **預期結果**：帳號或冷卻受限時仍回 200 一般訊息；滿 60 秒可進入頻率判斷；每帳號第 6 次回一般 200 但不寄信，每 IP 第 6 次回 429 `rate_limited`；不存在帳號仍累計 IP 且不洩漏存在性；滾動視窗結束後可重寄。
 - **資料後置狀態**：只有允許的請求建立新 Token／EmailMessages；被限制請求不建立 Token、不使現有 Token 失效。
-- **現有自動化覆蓋**：無；冷卻與雙維度限制尚未實作。
+- **現有自動化覆蓋**：完整：`AuthApiTests.重寄驗證信應套用精確冷卻與帳號Ip滾動上限且受限請求不使Token失效` 已於 2026-09-15 以固定 TimeProvider、可控來源位址與真實 SQL Server 合併通過 59.999／60 秒、帳號與 IP 第 5／6 次、不存在帳號累計 IP、60 分鐘視窗恢復，以及受限請求不建立新信件／不使現有 Token 失效。
 
 #### TC-SEC-AUTH-019 登入失敗 rate limit、不鎖帳號與安全稽核
-- **類型與優先級**：Security／P0；**測試層級**：Service、API、SQL；**狀態**：Planned（GAP-003、OPEN-002、OPEN-011）
+- **類型與優先級**：Security／P0；**測試層級**：Service、API、SQL；**狀態**：Ready
 - **對應需求**：AUTH；GAP-003；OPEN-002；OPEN-011
 - **前置條件**：固定 TimeProvider；有效啟用帳號；設定 allowlist reverse proxy，並準備兩個共用 rate-limit store 的應用執行個體。
 - **測試步驟**：以同帳號／不同 IP 及不同帳號／同 IP 分別在滾動 15 分鐘內送出 5 次錯誤密碼；跨兩個執行個體累計；再送第 6 次與正確密碼；另偽造非可信來源的 forwarded IP；時間推進超過視窗後登入並檢查稽核。
 - **預期結果**：兩個維度及跨 instance 都能啟動同一限制；只採信 allowlist proxy 的 forwarded IP；第 1–4 次失敗回 401，第 5 次及限制視窗內後續請求回 429 `rate_limited`；不顯示 CAPTCHA、不鎖定帳號；視窗結束後可登入；稽核不記錄密碼／Token。
 - **資料後置狀態**：帳號狀態不變；只有最後成功登入建立 refresh token；保留不含敏感資料的安全稽核與 rate-limit 計數。
-- **現有自動化覆蓋**：無；rate limit 與登入安全稽核尚未實作。
+- **現有自動化覆蓋**：完整：`AuthApiTests.登入失敗應在第五次套用共享雙維度限流且不得鎖帳號或洩漏敏感資料` 已於 2026-09-16 以固定 TimeProvider 與真實 SQL Server 驗證帳號／IP 第 1–4 次 401、第 5 次與限制中正確密碼 429、兩個應用執行個體共用門檻、15 分鐘後恢復、帳號不鎖定，以及 DB／Warning Log 不含帳號或密碼；`AuthApiTests.反向代理來源必須在Allowlist內且錯誤設定應於啟動時失敗` 驗證偽造 forwarded IP 無效、ForwardLimit=1、可信 proxy／network allowlist 與錯誤設定 fail-fast。完整 `AuthApiTests` Passed 24、Failed 0、Skipped 0。
 
 #### TC-F-AUTH-020 已驗證帳號正常登入與目前帳號資料
 - **類型與優先級**：Functional／P0；**測試層級**：API、SQL、UI、E2E；**狀態**：Ready
@@ -277,7 +278,7 @@
 - **測試步驟**：1. 取得 CSRF token 與配對 cookie。2. 各帳號登入。3. 檢查 response、`PMW-REFRESH` Set-Cookie 與 RefreshTokens。4. 以 access token 呼叫 `/auth/me`。
 - **預期結果**：CSRF endpoint 回 200 token 與配對 cookie；登入 200；JSON 只含 access token 與到期時間，不含 refresh token；refresh token 只以 HttpOnly、Path=`/api/v1/auth` cookie 傳遞且 DB 僅保存 hash；`/auth/me` 的帳號、Email、名稱、驗證／啟用狀態、唯一系統角色與 functions 均與目前帳號一致；UI 進入原 redirect 或 Task 清單。
 - **資料後置狀態**：每次登入新增一筆有效 refresh token；帳號與業務資料不變。
-- **現有自動化覆蓋**：部分：`mockServices.spec.ts` 驗證 CSRF／Bearer 流程，`app.spec.ts` 驗證登入後載入 Project；未驗證三種角色、Cookie／DB 與 `/auth/me` 完整欄位。
+- **現有自動化覆蓋**：完整：`AuthApiTests.已驗證帳號登入應只回AccessToken並由Me回傳正確角色能力` 已以三組資料驅動測試通過 User／Administrator／Admin 的登入、HttpOnly Refresh Cookie、DB hash 及 `/auth/me` 完整角色／functions；`mockServices.spec.ts` 驗證 CSRF／Bearer，`app.spec.ts` 已於 2026-09-15 在 desktop／mobile 真實瀏覽器完成 Admin 登入與正式 Project API 載入。
 
 #### TC-ERR-AUTH-021 缺少、未知、過期、已撤銷或停用帳號的 Refresh Token
 - **類型與優先級**：Security／P0；**測試層級**：Service、API、SQL、UI；**狀態**：Ready
@@ -286,7 +287,7 @@
 - **測試步驟**：各組帶有效 CSRF 配對呼叫 refresh，檢查 Problem Details、Set-Cookie、token family 與前端登入狀態。
 - **預期結果**：缺少 cookie 回 401 `missing_refresh_token`；未知 token 回 401 `invalid_refresh_token`；過期或已撤銷 token 回 401 `refresh_token_reuse` 並撤銷同 family 尚有效 token；停用帳號回 401 `account_disabled` 並撤銷該 token；均不回傳 access／refresh token，UI 清除登入狀態且不得形成重試迴圈。
 - **資料後置狀態**：應撤銷的 token／family 已撤銷；沒有新增 token 或業務資料異動。
-- **現有自動化覆蓋**：部分：`mockServices.spec.ts` 只測前端 refresh 401 清除 access token；Backend 各失敗分支尚無自動化。
+- **現有自動化覆蓋**：完整：`AuthApiTests.Refresh失敗矩陣應回固定錯誤並撤銷必要TokenFamily` 已以真實 SQL Server 合併驗證缺少、未知、過期、已撤銷及停用帳號五種分支，並檢查精確錯誤碼與必要的 token family 撤銷；`mockServices.spec.ts` 驗證 refresh 401 清除 access token，`app.spec.ts.未知RefreshCookie會清除登入狀態並返回登入頁` 已於 2026-09-16 在 desktop／mobile 以真實 API 驗證正式 UI 復原路徑。
 
 #### TC-ERR-AUTH-022 重寄驗證信時 SMTP 失敗
 - **類型與優先級**：Error／P1；**測試層級**：Service、API、SQL、UI；**狀態**：Ready
@@ -295,7 +296,7 @@
 - **測試步驟**：以帳號及 Email 分別重寄，檢查 response、EmailMessages 與驗證頁；恢復 gateway 後再次重寄。
 - **預期結果**：為避免揭露帳號狀態，失敗時仍回 200 一般訊息；EmailMessages 記錄 Failed 與可診斷但不含敏感 token 的錯誤；UI 保留重寄入口且不宣稱已成功寄出；gateway 恢復後可依冷卻／上限規則重試。
 - **資料後置狀態**：失敗寄送有 Failed 紀錄且帳號仍未驗證；恢復後成功重寄的最新版 Token 與舊 Token 狀態另依 TC-ERR-AUTH-015 驗證。
-- **現有自動化覆蓋**：無；現有前端測試只覆蓋註冊首次寄信失敗提示。
+- **現有自動化覆蓋**：完整：`AuthApiTests.重寄驗證信遇EmailGateway失敗仍應回一般成功並記錄Failed` 已於 2026-09-15 以真實 SQL Server 與失敗 fake gateway，分別以帳號及 Email 通過 200 一般回應、Failed／AttemptCount／安全錯誤內容與不含 Email／Token 的 Warning Log；`AuthApiTests.重寄成功應只保留最新版Token而寄送失敗不得使原Token失效` 驗證失敗不廢止舊 Token；TC-ERR-AUTH-018 合併驗證恢復後冷卻／上限。`resendVerificationView.spec.ts`、`app.spec.ts` 驗證 UI 保留入口並以非承諾式訊息避免誤報寄送成功。
 
 ### 4.2 授權、角色、使用者與偏好
 
@@ -306,7 +307,7 @@
 - **測試步驟**：依帳號、姓名、Email 模糊搜尋；依四種角色篩選；切換頁次。
 - **預期結果**：只回符合資料，按帳號排序；page<1 校正 1，pageSize 限制 1–100；空結果顯示空狀態。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`UserApiTests.Admin查詢使用者應正確套用搜尋角色排序與分頁` 已於 2026-09-13 以真實 SQL Server通過 API 契約；`bootstrapAdminProtection.spec.ts` 已於 2026-09-15 通過清單分頁、搜尋與角色篩選交集、查詢參數及錯誤狀態。
 
 #### TC-ERR-USER-002 未具 accounts.read 禁止讀取他人資料
 - **類型與優先級**：Security／P0；**測試層級**：API、UI；**狀態**：Ready
@@ -315,7 +316,7 @@
 - **測試步驟**：呼叫 users list、他人 detail 與本人 detail，並直接輸入 `/users` route。
 - **預期結果**：list／他人 detail 為 403；本人 detail 可讀；UI 不顯示入口，直接 route 導 forbidden。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：部分：`router.spec.ts` 僅測未登入 redirect。
+- **現有自動化覆蓋**：完整：`UserApiTests.使用者詳情應依本人與AccountsRead能力套用已確認的403與404優先序` 已通過 User／Viewer 的 list 403、他人與不存在 ID 403、本人 detail 200，以及 Admin 對不存在 ID 404；`router.spec.ts` 已於 2026-09-15 驗證缺少 `accounts.read` 直接輸入 `/users` 導向 forbidden，具備權限才可進入。
 
 #### TC-ST-USER-003 Admin 原子更新角色與啟用狀態
 - **類型與優先級**：State／P0；**測試層級**：Service、API、SQL、UI；**狀態**：Ready
@@ -324,7 +325,7 @@
 - **測試步驟**：同一 request 變更 role 與 isEnabled；檢查 AccountRoles、TokenVersion、RefreshTokens、AuditLogs。
 - **預期結果**：單一交易全成或全敗；角色以取代方式更新；TokenVersion 只加 1；全部 refresh token 撤銷；稽核含操作者及前後值。
 - **資料後置狀態**：目標帳號只有一個系統角色且 session 失效。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`UserApiTests.Admin原子更新角色與啟用狀態應只增加一次TokenVersion並撤銷Session` 已於 2026-09-13 以真實 SQL Server通過 API／SQL；`bootstrapAdminProtection.spec.ts` 已於 2026-09-15 驗證單一表單送出角色與啟用狀態，且 Account／Name／Email 唯讀。
 
 #### TC-ERR-USER-004 未驗證帳號不得提升角色
 - **類型與優先級**：Security／P0；**測試層級**：API、SQL、UI；**狀態**：Ready
@@ -333,7 +334,7 @@
 - **測試步驟**：分別要求改為 User、Administrator、Admin；另測保持 Viewer。
 - **預期結果**：前三者 422 `email_not_confirmed`；角色、狀態、token version 均不變；Viewer request 可依指定狀態規則處理。
 - **資料後置狀態**：不產生非法角色。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`UserApiTests.未驗證帳號不得提升角色但可維持Viewer並更新狀態` 已於 2026-09-13 通過 API／SQL；`bootstrapAdminProtection.spec.ts` 已於 2026-09-15 驗證 422 錯誤呈現並保留未送出的表單狀態。
 
 #### TC-ERR-USER-005 保護最後一位有效 Admin
 - **類型與優先級**：Concurrency／P0；**測試層級**：Service、API、SQL；**狀態**：Ready
@@ -342,7 +343,7 @@
 - **測試步驟**：嘗試降級、停用；再以兩個並行 request 分別移除兩位 Admin。
 - **預期結果**：最後一位異動回 409 `last_admin`；Serializable transaction 防止並行同時通過；至少保留一位有效 Admin。
 - **資料後置狀態**：系統仍有有效 Admin。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整（Backend）：`UserApiTests.最後一位有效Admin不得降級停用且並行異動後仍至少保留一位` 已於 2026-09-13 以真實 SQL Server 通過最後一位 Admin 的 role／status／administration 三端點保護，並連續兩次通過兩個 Admin 並行降級僅一個成功、另一個 409 `last_admin` 且最終仍有一位有效 Admin。
 
 #### TC-ERR-USER-006 Bootstrap Admin 不可修改或加入專案
 - **類型與優先級**：Security／P0；**測試層級**：API、UI；**狀態**：Ready
@@ -351,7 +352,7 @@
 - **測試步驟**：在清單與直接 API 嘗試改角色／狀態；搜尋 member candidates 並直接加入專案。
 - **預期結果**：UI 不提供編輯；API 409 `bootstrap_admin_immutable`；候選清單排除；直接加入 422 `bootstrap_admin_not_project_member`。
 - **資料後置狀態**：bootstrap Admin 維持啟用 Admin，非專案成員。
-- **現有自動化覆蓋**：部分：`BootstrapAdminPolicyTests`、`bootstrapAdminProtection.spec.ts`。
+- **現有自動化覆蓋**：完整：`UserApiTests.BootstrapAdmin透過三個帳號管理Api皆不可修改` 已通過 role／status／administration 的 409 與資料保護；`BootstrapAdminPolicyTests`、`bootstrapAdminProtection.spec.ts` 補充 policy 與 UI；`ProjectApiTests` 已驗證候選清單排除 Bootstrap Admin、直接加入回 422 `bootstrap_admin_not_project_member`，且不建立 membership／role mapping。
 
 #### TC-F-USER-007 分離的角色與狀態 API 保持相同不變條件
 - **類型與優先級**：Contract／P1；**測試層級**：API、SQL；**狀態**：Ready
@@ -360,7 +361,7 @@
 - **測試步驟**：分別只換角色、只改啟用狀態；重複測未驗證提升、最後一位 Admin、bootstrap Admin。
 - **預期結果**：成功時只改指定面向並各自撤銷 tokens、遞增 TokenVersion、寫 audit；三項保護規則與整合 administration API 一致。
 - **資料後置狀態**：每次成功後仍只有一個系統角色；失敗時完全不變。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整（Backend）：`UserApiTests.分離角色與狀態Api應只改指定面向並各自使Session失效` 已於 2026-09-13 以真實 SQL Server 通過 role API 只改角色、status API 只改啟用狀態，兩者各自遞增一次 TokenVersion、撤銷 Refresh Token 並寫入對應 audit；未驗證、最後 Admin、bootstrap 保護由同檔其他案例共用驗證。
 
 #### TC-E-USER-008 現行版本不提供個資編輯
 - **類型與優先級**：Negative contract／P2；**測試層級**：UI、API；**狀態**：Ready
@@ -369,16 +370,16 @@
 - **測試步驟**：1. 開啟 `/settings`。2. 開啟 `/users/{id}`。3. 檢查可用 API 與畫面操作。
 - **預期結果**：Settings 只提供語言與批次確認偏好；User Detail 只讀顯示帳號、名稱、Email 與驗證狀態，Admin 只可修改系統角色與啟用狀態；不存在 Account、Name、Email 編輯 request。
 - **資料後置狀態**：個資不變；只有使用者明確儲存時才異動偏好、系統角色或啟用狀態。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`UserApiTests.OpenApi的使用者異動Dto應只包含角色狀態與偏好欄位` 已於 2026-09-13 驗證 OpenAPI；`bootstrapAdminProtection.spec.ts` 與 `settingsView.spec.ts` 已於 2026-09-15 驗證 User Detail 個資唯讀、偏好更新與 Viewer 無儲存控制。
 
 #### TC-F-USER-009 本人與管理者讀取使用者詳情
 - **類型與優先級**：Functional／P1；**測試層級**：API、UI；**狀態**：Ready
-- **對應需求**：User Story「畫面與查詢契約」；FLOW-USER；`GET /users/{id}`
+- **對應需求**：User Story「畫面與查詢契約」；FLOW-USER；`GET /users/{id}`；OPEN-016
 - **前置條件**：一般帳號本人、具 `accounts.read` 的 Admin，以及存在與不存在的 userId。
-- **測試步驟**：1. 本人讀取自己的詳情。2. Admin 讀取他人詳情。3. 兩者在已授權條件下讀取不存在 ID。4. 核對 `/users/{id}` 顯示內容與可操作控制。
-- **預期結果**：存在資料回 200，包含帳號、顯示名稱、Email、驗證狀態、啟用狀態、唯一系統角色及 bootstrap 標記；已授權但不存在回 404 `not_found`；一般本人只讀，Admin 僅依 functions 顯示角色／啟用狀態控制，不提供個資編輯。
+- **測試步驟**：1. 本人讀取自己的詳情。2. Admin 讀取他人詳情。3. Admin 在具 `accounts.read` 的已授權條件下讀取不存在 ID。4. 一般 User／Viewer 讀取非本人且不存在 ID。5. 核對 `/users/{id}` 顯示內容與可操作控制。
+- **預期結果**：存在資料回 200，包含帳號、顯示名稱、Email、驗證狀態、啟用狀態、唯一系統角色及 bootstrap 標記；Admin 對不存在 ID 回 404 `not_found`；一般 User／Viewer 對任何非本人 ID（包含不存在 ID）均回 403；一般本人只讀，Admin 僅依 functions 顯示角色／啟用狀態控制，不提供個資編輯。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`UserApiTests.使用者詳情應依本人與AccountsRead能力套用已確認的403與404優先序` 已依 OPEN-016 通過 User／Viewer 本人 detail 完整欄位 200、非本人與不存在 ID 403、Admin 讀他人 200 及不存在 ID 404；`bootstrapAdminProtection.spec.ts` 驗證詳情顯示帳號、名稱、Email、驗證／啟用與角色，無管理能力時維持唯讀且不顯示管理表單。
 
 #### TC-ERR-USER-010 帳號管理授權與不存在的帳號／角色
 - **類型與優先級**：Security／P0；**測試層級**：Service、API、SQL、UI；**狀態**：Ready
@@ -387,7 +388,7 @@
 - **測試步驟**：1. 非 Admin 三種角色直接呼叫 `/role`、`/status`、`/administration`，目標分別為存在與不存在帳號。2. Admin 對不存在帳號變更狀態。3. Admin 對存在帳號指定不存在角色。4. 檢查 UI、AccountRoles、狀態、TokenVersion、RefreshTokens 與 AuditLogs。
 - **預期結果**：只有具備對應 manage functions 的 Admin 可進入異動流程；非 Admin 對存在或不存在目標皆回 403 且 UI 不顯示操作；Admin 對不存在帳號或角色回 404 `not_found`；所有失敗均不變更角色／狀態、不遞增 TokenVersion、不撤銷 session，也不寫成功 audit。
 - **資料後置狀態**：所有帳號、角色關聯、token 與稽核維持原狀。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`UserApiTests.帳號管理失敗矩陣應維持403與404契約且不異動目標資料` 已合併通過 User／Viewer／Administrator 對三個管理端點及存在／不存在目標皆為 403，Admin 對不存在帳號／角色為 404，且角色、狀態、TokenVersion、Refresh Token、audit 均不變；`bootstrapAdminProtection.spec.ts.缺少帳號管理能力時只顯示唯讀資料且沒有管理表單` 驗證 UI 不提供未授權操作。
 
 #### TC-F-PREF-001 讀寫個人批次確認偏好
 - **類型與優先級**：Functional／P1；**測試層級**：API、SQL、UI、E2E；**狀態**：Ready
@@ -396,7 +397,7 @@
 - **測試步驟**：A 設為 true、B 設為 false；重新登入；A 執行批次更新；再由設定頁將 A 改回 false。
 - **預期結果**：偏好按帳號隔離並持久化；true 略過確認，false 顯示確認；重開後仍一致。
 - **資料後置狀態**：各帳號各一筆偏好。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`UserApiTests.個人偏好應按帳號持久化且Viewer只能讀取` 已以真實 SQL Server 通過兩帳號偏好隔離、重新登入持久化及 true→false 更新；`settingsView.spec.ts` 驗證成功、submitting 與防重複送出，`app.spec.ts.批次確認偏好可保存並在重新載入後維持` 已於 2026-09-16 在 desktop／mobile 以真實 API 驗證保存、reload 持久化及復原原值。
 
 #### TC-ERR-PREF-002 Viewer 只能讀偏好不能寫
 - **類型與優先級**：Security／P1；**測試層級**：API、UI；**狀態**：Ready
@@ -405,7 +406,7 @@
 - **測試步驟**：GET 與 PUT `/users/me/preferences`。
 - **預期結果**：GET 200；PUT 403；UI 若顯示可儲存控制即屬實作缺陷。
 - **資料後置狀態**：偏好不變。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`UserApiTests.個人偏好應按帳號持久化且Viewer只能讀取` 已於 2026-09-13 通過 Viewer GET 200、PUT 403 且偏好不變；`settingsView.spec.ts` 已於 2026-09-15 驗證 Viewer 控制項唯讀且不顯示儲存按鈕。
 
 ### 4.3 Project 與成員
 
@@ -416,7 +417,7 @@
 - **測試步驟**：各角色呼叫 project list、A detail、B detail。
 - **預期結果**：一般成員只見 A；B detail 403；全域管理者可見全部未刪除 Project。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`ProjectApiTests` 已驗證一般成員、非成員、Administrator、Admin 與軟刪除的 API 資料範圍；`projectListView.spec.ts` 已於 2026-09-15 驗證 UI 只呈現 service 回傳的可存取資料及載入錯誤狀態。
 
 #### TC-F-PRJ-002 Project 搜尋、狀態篩選與分頁
 - **類型與優先級**：Functional／P1；**測試層級**：API、UI；**狀態**：Ready
@@ -425,43 +426,43 @@
 - **測試步驟**：使用單一 search 分別命中三欄，搭配 status 與分頁。
 - **預期結果**：依 CreatedAt 降冪；totalCount 正確；無結果顯示空狀態；不宣稱支援 Owner filter。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`ProjectApiTests` 已驗證 code/name/description 搜尋、status、CreatedAt 降冪、分頁正規化與空結果；`projectListView.spec.ts` 已於 2026-09-15 驗證 search／status／page 交集及查詢參數。
 
 #### TC-F-PRJ-003 建立 Project 與自動 Owner membership
-- **類型與優先級**：Functional／P0；**測試層級**：API、SQL、E2E；**狀態**：Planned（GAP-006、OPEN-005）
+- **類型與優先級**：Functional／P0；**測試層級**：API、SQL、E2E；**狀態**：Ready
 - **對應需求**：FLOW-PRJ；API Project contract
 - **前置條件**：具 projects.create；Owner 帳號啟用、Email 已驗證且系統角色為 Administrator；提供有效 IANA TimeZoneId。
 - **測試步驟**：建立 Project，檢查 response、Projects、ProjectMembers、ProjectMemberRoles、AuditLogs 與 TimeZoneId。
 - **預期結果**：201；狀態 Pending、versionNumber=1；產生 `PRJ-YYYYMMDD######`；Owner 自動成為 member 且具 ProjectManager；保存 IANA TimeZoneId 並建立稽核。
 - **資料後置狀態**：Project 與 Owner 關聯完整。
-- **現有自動化覆蓋**：部分：`app.spec.ts` 測 Admin 建立與 code 格式；編號另有 SQL tests；Backend 目前只檢查 Owner 啟用狀態，尚未檢查 Email 驗證與 Administrator role，Project 也沒有 TimeZoneId。
+- **現有自動化覆蓋**：完整：`ProjectApiTests` 已以真實 SQL Server 驗證 403、Owner 完整資格、201、Pending、version、membership、ProjectManager、audit 與 IANA TimeZoneId；`projectFormView.spec.ts` 驗證建立固定 Pending、trim、合格 Owner 候選與時區必填；`app.spec.ts` 已於 2026-09-16 在 desktop／mobile 隔離環境建立專案與 Task。
 
 #### TC-ERR-PRJ-004 無權建立與不具資格的 Owner
-- **類型與優先級**：Security／P0；**測試層級**：API、SQL；**狀態**：Planned（GAP-006）
+- **類型與優先級**：Security／P0；**測試層級**：API、SQL；**狀態**：Ready
 - **對應需求**：FLOW-PRJ
 - **前置條件**：準備 Viewer／User／Admin／Administrator，以及不存在、停用、未驗證或非 Administrator 的 Owner 候選帳號。
 - **測試步驟**：1. 無建立權限角色嘗試建立。2. 有權角色分別以不存在、停用、未驗證、Admin、User、Viewer 作 Owner 建立。3. 修改時分別指定非成員或任一不合格成員為 Owner。
 - **預期結果**：無權 403；任一無效 Owner 回 422 `invalid_owner`；建立失敗不消耗已 rollback 的業務編號、不產生孤兒資料；修改失敗不移交 Owner。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：部分：`SqlServerConstraintTests` 測編號 rollback，不測 Project service。
+- **現有自動化覆蓋**：完整：`ProjectApiTests` 已於 2026-09-16 以真實 SQL Server 重測無權建立 403，不存在、停用、未驗證、Admin、User、Viewer Owner 在建立與修改皆回 422 `invalid_owner`，失敗不建立 Project／不移交 Owner，合法 Administrator 可建立與移交；`SqlServerConstraintTests` 另驗證編號交易 rollback。本次 `ProjectApiTests` 最終 Passed 14、Failed 0、Skipped 0。
 
 #### TC-E-PRJ-005 Project 欄位邊界
-- **類型與優先級**：Edge／P1；**測試層級**：API、SQL、UI；**狀態**：Planned（CON-007）
+- **類型與優先級**：Edge／P1；**測試層級**：API、SQL、UI；**狀態**：Ready
 - **對應需求**：FLOW-PRJ；DB
 - **前置條件**：Frontend 完成對齊正式輸入契約。
 - **測試步驟**：測名稱 trim 後 0/1/2/120/121/200/201 字及 description 空值/4000/4001 字。
 - **預期結果**：名稱 1–200 字通過，0 或 201 字拒絕；description 空值或最多 4000 字通過，4001 字拒絕；前後端界線一致且回欄位錯誤而非 DB 500。
 - **資料後置狀態**：拒絕值不建立／更新。
-- **現有自動化覆蓋**：部分：Frontend 已有元件測試鎖定名稱 1–200 字與 Description 選填／4000 字上限；Backend 邊界驗證與 API／SQL 測試尚未完成。
+- **現有自動化覆蓋**：完整：Frontend 元件測試鎖定名稱 1–200 字與 Description 選填／4000 字上限；`ProjectApiTests.Project建立與修改應套用名稱及說明長度邊界並回欄位錯誤` 已於 2026-09-15 以真實 SQL Server 驗證建立／修改的空白、1、200、201 字名稱與 null、4000、4001 字說明，拒絕時回對應欄位錯誤且資料不異動。
 
 #### TC-ST-PRJ-006 修改 Project 並增加版本
-- **類型與優先級**：State／P0；**測試層級**：API、SQL、UI；**狀態**：Planned（GAP-006）
+- **類型與優先級**：State／P0；**測試層級**：API、SQL、UI；**狀態**：Ready
 - **對應需求**：FLOW-PRJ；optimistic concurrency
 - **前置條件**：可管理 Project，持有最新 rowVersion；新 Owner 是已啟用、Email 已驗證、system role=Administrator 的既有 Project 成員。
 - **測試步驟**：更新名稱、說明、Owner、status、TimeZoneId；重新讀取。
 - **預期結果**：200；基本資料更新；VersionNumber 加 1；回傳新 rowVersion；稽核含前後資料；成員／Task 異動不增加 VersionNumber。
 - **資料後置狀態**：保存新資料與版本。
-- **現有自動化覆蓋**：部分：`DomainEntityTests`、`DatabaseModelTests` 只測 VersionNumber；Backend 目前未確認新 Owner 的啟用、Email 驗證與 Administrator role，也沒有 TimeZoneId。
+- **現有自動化覆蓋**：完整：`ProjectApiTests` 已驗證 Owner 啟用／Email 驗證／Administrator／成員資格、TimeZoneId 修改與持久化、status、VersionNumber、rowVersion 與 audit；`projectFormView.spec.ts` 驗證編輯載入、時區預載／修改、衝突及成功導向。
 
 #### TC-ERR-PRJ-007 Project rowVersion 衝突
 - **類型與優先級**：Concurrency／P0；**測試層級**：API、SQL、UI；**狀態**：Ready
@@ -470,7 +471,7 @@
 - **測試步驟**：A 成功更新；B 以舊 rowVersion 更新。
 - **預期結果**：B 回 409 `concurrency_conflict`；UI 保留輸入並要求重新載入；A 資料不被覆蓋。
 - **資料後置狀態**：只保留 A 更新。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`ProjectApiTests` 已驗證兩個 client 的舊 rowVersion 回 409、資料不覆蓋與新版本保存；`projectFormView.spec.ts` 已於 2026-09-15 驗證 UI 顯示可重試錯誤並保留完整輸入。
 
 #### TC-ST-PRJ-008 四種 Project status 任意互轉
 - **類型與優先級**：State／P1；**測試層級**：Unit、API；**狀態**：Ready（GAP-004）
@@ -479,34 +480,34 @@
 - **測試步驟**：以資料驅動覆蓋 Pending／Active／Completed／Archived 的 16 組 source→target。
 - **預期結果**：16 組均可成功，包含更新為相同狀態；每次成功更新依契約增加版本並留下稽核，不回傳狀態轉換錯誤。
 - **資料後置狀態**：每次操作後為指定目標狀態，並保存最新 rowVersion／VersionNumber。
-- **現有自動化覆蓋**：部分：`DomainEntityTests` 只驗證 Pending→Active，未覆蓋 16 組。
+- **現有自動化覆蓋**：完整：`DomainEntityTests.Project四種狀態應允許任意互轉` 已以資料驅動通過 16 組 Domain 轉換；`ProjectApiTests.Project四種Status應在Api層允許全部十六組互轉並增加版本與稽核` 已於 2026-09-16 以真實 SQL Server 重測 16 組 API 互轉、相同狀態更新、VersionNumber、rowVersion 與逐筆 audit。
 
 #### TC-ST-PRJ-009 軟刪除 Project 並記錄刪除者
-- **類型與優先級**：Security／P0；**測試層級**：Service、API、SQL、UI；**狀態**：Planned（GAP-009、OPEN-004、OPEN-014）
+- **類型與優先級**：Security／P0；**測試層級**：Service、API、SQL、UI；**狀態**：Ready
 - **對應需求**：FLOW-PRJ；DB；GAP-009；OPEN-014
 - **前置條件**：Administrator 或 Admin；Project 含 Member、Task、Comment、history；持有最新 rowVersion。
 - **測試步驟**：由兩種允許角色分別刪除 Project；查一般 API、IgnoreQueryFilters 資料、DeletedAt、DeletedByAccountId 與 AuditLogs。
 - **預期結果**：回 204；Project 從一般 list/detail 隱藏；所屬 Member、Task、Comment 從一般 Project scope 隱藏但資料列未實體刪除；DeletedAt 與登入操作者 DeletedByAccountId 正確；稽核含 Project 與操作者。
 - **資料後置狀態**：Project 軟刪除且關聯歷史完整保留；本期沒有還原入口。
-- **現有自動化覆蓋**：無；目前只有 Projects.DeletedAt/query filter，尚無刪除 API、DeletedByAccountId 或 UI。
+- **現有自動化覆蓋**：完整：`ProjectApiTests.Administrator與Admin軟刪除Project應隱藏專案並保留子資料及刪除稽核` 已於 2026-09-16 以真實 SQL Server 驗證 204、list／detail 隱藏、DeletedAt、DeletedByAccountId、Member／Task／Comment／history 保留與 actor audit；`projectDetailView.spec.ts` 驗證兩種允許角色的軟刪除確認及成功導向。
 
 #### TC-ERR-PRJ-010 Project 軟刪除授權、重複刪除與不存在資源
-- **類型與優先級**：Security／P0；**測試層級**：Service、API、UI；**狀態**：Planned（GAP-008、GAP-009、OPEN-014）
+- **類型與優先級**：Security／P0；**測試層級**：Service、API、UI；**狀態**：Ready
 - **對應需求**：FLOW-PRJ；GAP-008；GAP-009；OPEN-014
 - **前置條件**：Viewer、User、Administrator、Admin；準備存在、已軟刪除及不存在 Project。
 - **測試步驟**：四種角色分別刪除三種 Project；以 stale rowVersion 刪除；另直接嘗試呼叫未提供的 restore／永久刪除 endpoint 或操作 UI。
 - **預期結果**：只有 Administrator、Admin 可刪除存在 Project；其他角色對存在／不存在 Project 均優先回 403；已授權角色對不存在或已刪除 Project 回 404；stale rowVersion 回 409 `concurrency_conflict`；不提供 restore 或永久刪除 API／UI。
 - **資料後置狀態**：失敗操作不改 DeletedAt、DeletedByAccountId、子資料或 AuditLogs；成功刪除只產生一次稽核。
-- **現有自動化覆蓋**：無；功能尚未實作。
+- **現有自動化覆蓋**：完整：`ProjectApiTests.Project軟刪除失敗矩陣應維持資料不變且不提供復原或永久刪除` 已驗證 User／Viewer 對存在、已刪除、不存在均優先 403，Administrator／Admin 對已刪除或不存在回 404，stale／非法 rowVersion 回 409，無 restore／permanent-delete endpoint 且無失敗 audit；UI 合併測試覆蓋按鈕角色、取消與衝突保留。
 
 #### TC-E-PRJ-011 Project IANA TimeZoneId 驗證與既有資料遷移
-- **類型與優先級**：Data integrity／P0；**測試層級**：API、SQL、UI；**狀態**：Planned（OPEN-005、OPEN-012）
+- **類型與優先級**：Data integrity／P0；**測試層級**：API、SQL、UI；**狀態**：Ready
 - **對應需求**：FLOW-PRJ；US-5；DB；OPEN-012
 - **前置條件**：已決議合法 IANA timezone 清單；部署設定提供 migration 預設 IANA timezone；migration 前已有 Project 資料。
 - **測試步驟**：建立／修改時分別送 `Asia/Taipei`、其他合法 IANA ID、空白、Windows timezone ID 與未知 ID；執行 migration 前置檢查及既有資料回填。
 - **預期結果**：合法 IANA ID 可保存並原樣 round-trip；新 Project 的空白、Windows ID、未知 ID 回 400 欄位錯誤且不得套用系統預設；migration 使用部署設定回填既有 Project，設定缺少或無效時 fail-fast。
 - **資料後置狀態**：新資料皆明確指定合法 TimeZoneId；既有資料使用部署設定的合法 IANA timezone 回填。
-- **現有自動化覆蓋**：無；Project 尚無 TimeZoneId 欄位。
+- **現有自動化覆蓋**：完整：`ProjectApiTests.Project建立與修改應要求明確合法IanaTimeZoneId並持久化` 驗證空值、空白、Windows ID、未知 ID 被拒絕，並驗證 `Asia/Taipei`與 `America/New_York` round-trip；`SqlServerConstraintTests.ProjectTimeZoneMigration應要求合法Iana設定並只回填既有資料` 以臨時資料庫驗證缺設定／Windows ID fail-fast 與合法回填；`projectFormView.spec.ts` 覆蓋必填、新增與修改。
 
 #### TC-F-MEMBER-001 成員候選人搜尋與最小揭露
 - **類型與優先級**：Security／P1；**測試層級**：API、UI；**狀態**：Ready
@@ -515,7 +516,7 @@
 - **測試步驟**：依 account/name 搜尋並分頁。
 - **預期結果**：排除既有成員、停用帳號與 bootstrap Admin；只回 id/account/name；未授權者 403。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：`ApiSurfaceTests` 只確認 endpoint 出現在 OpenAPI。
+- **現有自動化覆蓋**：完整：`ProjectApiTests` 已驗證 account／name 搜尋、分頁、最小欄位、既有／停用／bootstrap 排除與非成員 403；`projectDetailView.spec.ts.依帳號或名稱搜尋候選人且畫面只顯示最小必要欄位` 已於 2026-09-16 驗證 trim 後 search 參數、候選 id/account/name 呈現且不顯示 Email。
 
 #### TC-F-MEMBER-002 加入一名多角色成員
 - **類型與優先級**：Functional／P0；**測試層級**：API、SQL、UI；**狀態**：Ready
@@ -524,7 +525,7 @@
 - **測試步驟**：用複選 UI 加入；重讀成員與 DB。
 - **預期結果**：一筆 ProjectMembers、兩筆 ProjectMemberRoles；UI 顯示兩角色；寫入稽核。
 - **資料後置狀態**：成員具指定角色集合。
-- **現有自動化覆蓋**：部分：`multiSelectDropdown.spec.ts`、`projectDetailView.spec.ts` 只測 UI 複選。
+- **現有自動化覆蓋**：完整：`ProjectApiTests` 已驗證 API、SQL 單一 membership、完整多角色集合與 audit；`multiSelectDropdown.spec.ts` 驗證複選互動，`projectDetailView.spec.ts.新增成員會送出完整多角色集合` 驗證 UI 送出完整角色 IDs。
 
 #### TC-ERR-MEMBER-003 重複成員與重複角色
 - **類型與優先級**：Error／P0；**測試層級**：API、SQL；**狀態**：Ready
@@ -533,7 +534,7 @@
 - **測試步驟**：再次加入；request 內重複 roleId；繞過 API 插入相同 membership／role mapping。
 - **預期結果**：重複加入 409 `duplicate_member`；request 內角色去重；DB 複合 PK 拒絕重複資料。
 - **資料後置狀態**：只保留一 membership 與每角色一 mapping。
-- **現有自動化覆蓋**：部分：`DatabaseModelTests` 只檢查複合 PK metadata。
+- **現有自動化覆蓋**：完整：`ProjectApiTests` 已驗證重複加入 409、request roleId 去重，並直接對 SQL Server 驗證 membership／role mapping 複合 PK 拒絕重複資料。
 
 #### TC-ERR-MEMBER-004 空或無效 Project Role 集合
 - **類型與優先級**：Error／P1；**測試層級**：API、UI；**狀態**：Ready
@@ -542,7 +543,7 @@
 - **測試步驟**：新增／更新時送空陣列、未知 roleId、混合有效與無效 IDs；在 UI 嘗試取消最後一個角色。
 - **預期結果**：API 422 `invalid_project_roles`；UI 不允許取消最後一個角色；原集合不變。
 - **資料後置狀態**：不產生無角色成員。
-- **現有自動化覆蓋**：部分：`multiSelectDropdown.spec.ts` 測 UI 最後一個角色。
+- **現有自動化覆蓋**：完整：`ProjectApiTests` 已驗證新增與更新的空／未知／混合角色集合皆回 422 且原集合不變；`multiSelectDropdown.spec.ts` 已驗證 UI 不可取消最後一個角色。
 
 #### TC-ST-MEMBER-005 更新角色採完整取代
 - **類型與優先級**：State／P1；**測試層級**：API、SQL、UI；**狀態**：Ready
@@ -551,7 +552,7 @@
 - **測試步驟**：PUT 只送 B、C；重讀。
 - **預期結果**：A 被移除、B 保留、C 新增；不是增量追加；稽核含前後角色集合。
 - **資料後置狀態**：角色恰為 B、C。
-- **現有自動化覆蓋**：部分：`projectDetailView.spec.ts` 驗證 request 參數，不驗 DB。
+- **現有自動化覆蓋**：完整：`ProjectApiTests` 已驗證 API／SQL 完整取代與 audit 前後集合；`projectDetailView.spec.ts.新增與修改專案角色皆使用收合式多選Dropdown` 驗證 UI 由既有集合送出完整取代集合而非增量命令。
 
 #### TC-ERR-MEMBER-006 Owner 移除與角色保護
 - **類型與優先級**：State／P0；**測試層級**：API、SQL、UI；**狀態**：Ready
@@ -560,7 +561,7 @@
 - **測試步驟**：嘗試直接移除 Owner；先移交 Owner；檢查新 Owner ProjectManager；再移除舊 Owner。
 - **預期結果**：直接移除回 409 `owner_transfer_required`；移交在交易內補新 Owner 的 ProjectManager；之後舊 Owner 若無未完成 Task 可移除。
 - **資料後置狀態**：任何時點 Owner 都是成員且具 ProjectManager。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`ProjectApiTests` 已驗證直接移除 409、交易內 Owner 移交、新 Owner 自動補 ProjectManager 與舊 Owner 移除；`projectDetailView.spec.ts.Owner的移除按鈕停用但非Owner成員仍可操作` 已於 2026-09-16 驗證 UI 保護。
 
 #### TC-ERR-MEMBER-007 有未完成 Task 的成員不可移除
 - **類型與優先級**：State／P0；**測試層級**：API、SQL、UI；**狀態**：Ready
@@ -569,7 +570,7 @@
 - **測試步驟**：逐狀態嘗試移除；將全部 Task 完成或重新指派後再移除。
 - **預期結果**：未完成時 409 `task_reassignment_required`；全部處理後 204；刪 membership 與 role mappings並保留稽核。
 - **資料後置狀態**：Task 不會指向已移除的未完成責任人。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`ProjectApiTests` 已逐一驗證 Pending／InProgress／Blocked 的 409、Completed 後 204、SQL membership／role mapping 刪除與 audit；`projectDetailView.spec.ts.成員移除被阻擋時顯示錯誤且保留原成員` 已於 2026-09-16 驗證 UI 失敗復原。
 
 #### TC-F-MEMBER-008 讀取專案成員與多重角色
 - **類型與優先級**：Functional／P1；**測試層級**：API、SQL、UI；**狀態**：Ready
@@ -578,7 +579,7 @@
 - **測試步驟**：以 Project 成員及全域管理者讀取 members；核對 Account、Name 與角色集合；再以非成員直接呼叫。
 - **預期結果**：有權者取得該 Project 全部未移除成員，每位成員的多重角色不遺漏、不重複且與 DB 關聯一致；不回傳 Email 等候選／成員 API 未約定欄位；無權者回 403，UI 不顯示其他 Project 成員資料。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：部分：`projectDetailView.spec.ts` 只以 mock 成員資料驗證部分畫面結構，未覆蓋 API／DB 對應。
+- **現有自動化覆蓋**：完整：`ProjectApiTests` 已驗證成員／非成員 API 權限、SQL 關聯、最小欄位與多角色集合；`projectDetailView.spec.ts.白色內容卡片依序顯示Description與Member兩個區段` 已於 2026-09-16 驗證 Account、Name、單一／多重角色呈現且不顯示 Email。
 
 #### TC-ERR-MEMBER-009 不存在、停用或競態失效的成員候選人
 - **類型與優先級**：Error／P0；**測試層級**：Service、API、SQL、UI；**狀態**：Ready
@@ -587,7 +588,7 @@
 - **測試步驟**：1. 直接以不存在或已停用 accountId 加入成員。2. 先取得有效候選人，再於提交前停用該帳號並送出。3. 檢查錯誤、畫面候選清單、ProjectMembers、ProjectMemberRoles 與 AuditLogs。
 - **預期結果**：候選清單不顯示停用帳號；三種加入請求均回 422 `invalid_account`，UI 顯示帳號已不可使用並要求重新選擇；不得建立 membership、角色 mapping 或成功 audit。
 - **資料後置狀態**：Project 成員與角色集合不變。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`ProjectApiTests` 已驗證候選清單排除停用帳號、不存在／停用／查詢後競態停用皆回 422，且不建立成員關聯；`projectDetailView.spec.ts` 已於 2026-09-15 驗證 UI 顯示 `invalid_account` 訊息並保留候選選擇。
 
 ### 4.4 Task 清單、詳情與異動
 
@@ -598,7 +599,7 @@
 - **測試步驟**：進入 `/projects/{id}/task-items`。
 - **預期結果**：顯示 checkbox、code、title、deadline、status、creator、assignee；依 createdAt 新到舊；僅含該 Project 未軟刪除資料。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`TaskApiTests` 已以真實 SQL Server 驗證 API 完整欄位、CreatedAt 降冪、Project 範圍與軟刪除排除；`taskListView.spec.ts` 已於 2026-09-16 驗證預設 newest／page 參數、checkbox、code、title、deadline、status、creator、assignee、總筆數及 service 回傳順序的畫面呈現。
 
 #### TC-F-TASK-002 搜尋、篩選、mineOnly 與分頁
 - **類型與優先級**：Functional／P0；**測試層級**：API、UI；**狀態**：Ready
@@ -607,7 +608,7 @@
 - **測試步驟**：依 code/title/description 搜尋；搭配 status、assignee、onlyMine；切換 page。
 - **預期結果**：交集結果正確；totalCount 正確；無資料顯示空狀態；page/pageSize 邊界依 contract 正規化。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`TaskApiTests` 已驗證 code/title/description 搜尋、status/assignee/onlyMine 交集、totalCount、空結果與 page/pageSize 正規化；`taskListView.spec.ts` 已於 2026-09-16 驗證完整交集 query 傳入 service、URL 還原、分頁摘要與空資料狀態。
 
 #### TC-ST-TASK-003 Query string 與返回清單狀態
 - **類型與優先級**：State／P1；**測試層級**：UI、E2E；**狀態**：Ready
@@ -616,7 +617,7 @@
 - **測試步驟**：設定搜尋／狀態／指派者／mineOnly／排序／頁次；開詳情；按返回；重新整理。
 - **預期結果**：條件存在 URL query；返回及 reload 保留條件並載入相同範圍。
 - **資料後置狀態**：後端不變；瀏覽器 URL 保留條件。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`taskListView.spec.ts` 與 `taskDetailView.spec.ts` 已於 2026-09-15 驗證搜尋／狀態／指派者／mineOnly／排序／頁次由 URL query 還原，詳情連結、返回及重新掛載皆保留原清單條件。
 
 #### TC-E-TASK-004 清單排序允許值與非法值
 - **類型與優先級**：Edge／P2；**測試層級**：API；**狀態**：Ready
@@ -625,7 +626,7 @@
 - **測試步驟**：對四個 sortBy 測 asc/desc；再送未知 sortBy、未知 direction。
 - **預期結果**：合法值排序正確；依目前實作未知 sortBy fallback createdAt、非 asc fallback desc，且不形成 SQL injection。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`TaskApiTests` 已驗證 deadline/status/code/createdAt 的 asc/desc，以及未知 sortBy／direction 安全 fallback。
 
 #### TC-ERR-TASK-005 跨 Project 與無 membership 存取
 - **類型與優先級**：Security／P0；**測試層級**：API、UI；**狀態**：Ready
@@ -634,7 +635,7 @@
 - **測試步驟**：以 A taskId 搭配 B route projectId；非成員直接讀 list/detail/comments。
 - **預期結果**：跨 route 的 Task 不得回傳；對 Project scope 無權時，不論 Task 是否存在皆回 403；已通過 scope 授權但 Task 不存在或不屬該 route 時才回 404。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`TaskApiTests` 已驗證非成員 list/detail/comments 皆 403、跨 Project route 403，以及通過 scope 後不存在 Task 才回 404；`taskListView.spec.ts` 已於 2026-09-16 驗證 403 時只顯示一般化權限錯誤且不呈現 Task rows。
 
 #### TC-F-TASK-006 checkbox 權限、全選與暫存性
 - **類型與優先級**：Functional／P0；**測試層級**：UI；**狀態**：Ready
@@ -643,7 +644,7 @@
 - **測試步驟**：勾單列、表頭全選、切頁、完成批次、reload。
 - **預期結果**：無權列 disabled；Viewer 全 disabled；全選只選本頁可編輯列；批次成功與 reload 後清空；checkbox 不送 DB。
 - **資料後置狀態**：只可能變更批次目標 Task status，不保存選取狀態。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`taskListView.spec.ts.只允許選取可修改的Task並在切頁或重新掛載後清除` 已於 2026-09-16 驗證被指派者／非指派者、Viewer 全 disabled、表頭只全選可編輯列、切頁及重新掛載清空；`依批次確認偏好決定取消或直接送出` 驗證成功後清空。測試先重現切頁仍保留上一頁選取的缺陷，修正產品後通過。
 
 #### TC-E-TASK-007 未選 Task 時禁止確認
 - **類型與優先級**：Edge／P1；**測試層級**：UI；**狀態**：Ready
@@ -652,7 +653,7 @@
 - **測試步驟**：1. 進入頁面且不選 Task。2. 確認目標狀態預設為 `InProgress`。3. 選取一筆 Task。4. 清除選取。
 - **預期結果**：未選 Task 時確認鈕 disabled 且不得送 API；選取 Task 後可用預設 `InProgress` 送出；清除選取後再次 disabled。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`taskListView.spec.ts.未選取Task時停用確認且不送出批次請求` 已於 2026-09-16 驗證預設 `InProgress`、0 筆 disabled 且不送 API、選取後 enabled、取消選取後再次 disabled。
 
 #### TC-F-TASK-008 新增 Task 成功
 - **類型與優先級**：Functional／P0；**測試層級**：API、SQL、UI、E2E；**狀態**：Ready
@@ -661,16 +662,16 @@
 - **測試步驟**：由 `/admin/projects/{id}/task-items/new` 送出合法資料；檢查 DB 與導頁。
 - **預期結果**：201；產生 `TASK-YYYYMMDD######`；狀態固定 Pending；建立 history/audit；UI 顯示成功並進詳情。
 - **資料後置狀態**：新增 Task、history、audit。
-- **現有自動化覆蓋**：部分：`app.spec.ts` 測 Admin 建立與 code；無 DB history 驗證。
+- **現有自動化覆蓋**：完整：`TaskApiTests` 已驗證 201、trim、Pending、業務編號、SQL Task/history/audit；`app.spec.ts` 已於 2026-09-15 在 desktop／mobile 真實瀏覽器驗證由 Project 詳情進入新增表單、送出合法資料、導向詳情並顯示標題與 `TASK-YYYYMMDD######`。
 
 #### TC-ERR-TASK-009 新增 Task 驗證
-- **類型與優先級**：Error／P0；**測試層級**：API、UI、SQL；**狀態**：Planned（CON-008）
+- **類型與優先級**：Error／P0；**測試層級**：API、UI、SQL；**狀態**：Ready
 - **對應需求**：US-6
 - **前置條件**：可建立 Task。
 - **測試步驟**：測空標題、301 字標題、不存在／其他 Project assignee、startAt>deadline；另送 description 空值、純空白、8000 與 8001 字。
 - **預期結果**：非法資料回 400/422 對應 code；依正式契約，空 description 可接受，有值時 trim 後最多 8000 字；失敗不產生 Task/history/audit 或消耗編號。
 - **資料後置狀態**：失敗個案不變。
-- **現有自動化覆蓋**：部分：Frontend 已有元件測試鎖定 Description 選填與 8000 字上限；Backend 尚未在寫入 DB 前把 8001 字映射為欄位驗證錯誤。
+- **現有自動化覆蓋**：完整：`TaskApiTests` 已驗證空白／301 字 title、無效 assignee、錯誤日期、description null／空白／8000／8001 邊界及失敗無 Task/history/audit；Frontend 元件鎖定 Title／Description attributes；`app.spec.ts.Admin可建立專案與Task` 已於 2026-09-16 在 desktop／mobile 真實 API 先送 startAt 晚於 deadline，驗證 422 錯誤與輸入保留，再修正後成功建立。
 
 #### TC-F-TASK-010 後台完整修改 Task
 - **類型與優先級**：Functional／P0；**測試層級**：API、SQL、UI；**狀態**：Ready
@@ -679,7 +680,7 @@
 - **測試步驟**：修改 title/description/start/deadline/assignee/status。
 - **預期結果**：200 與新 rowVersion；所有欄位更新；寫 history/audit；前端顯示最新資料。
 - **資料後置狀態**：保存新資料及追蹤紀錄。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`TaskApiTests` 已驗證所有欄位、rowVersion、SQL、history 與 audit；`taskFormView.spec.ts.後台編輯會預填完整Task並連同最新版rowVersion更新所有欄位` 已驗證完整欄位預填與 update request。
 
 #### TC-F-TASK-011 被指派者只修改 status 與 deadline
 - **類型與優先級**：Security／P0；**測試層級**：API、UI、SQL；**狀態**：Ready
@@ -688,7 +689,7 @@
 - **測試步驟**：使用 PATCH 改 status/deadline；再嘗試完整 PUT 或竄改 title/assignee/startAt。
 - **預期結果**：PATCH 只更新兩欄；完整 PUT 403；其他欄保持；history/audit action=UpdateAssigned。
 - **資料後置狀態**：只變更允許欄位。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`TaskApiTests` 已驗證 PATCH 僅更新 status/deadline、完整 PUT 403、其他欄位不變及 UpdateAssigned history/audit；`taskFormView.spec.ts.被指派者只能編輯deadline與status並使用受限更新API` 已驗證其他欄位 disabled 且只呼叫受限更新 API。
 
 #### TC-ERR-TASK-012 非指派者與 Viewer 不可修改
 - **類型與優先級**：Security／P0；**測試層級**：API、UI；**狀態**：Ready
@@ -697,7 +698,7 @@
 - **測試步驟**：直接呼叫單筆 PATCH、batch PATCH、PUT、POST、DELETE。
 - **預期結果**：全部寫入 403；UI 不顯示或 disabled 對應控制；資料無異動。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`TaskApiTests` 已合併驗證同 Project 非 assignee User 與 Viewer 對 POST／PUT／單筆 PATCH／batch PATCH／DELETE 全部 403 且資料不變；`taskListView.spec.ts` 驗證非 assignee checkbox disabled 與 Viewer 全部 disabled，`taskDetailView.spec.ts` 驗證 Viewer 不顯示編輯／留言控制。
 
 #### TC-ST-TASK-013 四種 Task status 任意互轉
 - **類型與優先級**：State／P1；**測試層級**：Unit、API；**狀態**：Ready（依現行 contract；見 GAP-005）
@@ -706,7 +707,7 @@
 - **測試步驟**：以資料驅動覆蓋 Pending/InProgress/Blocked/Completed 的 16 組 source→target。
 - **預期結果**：目前契約下皆可成功，包括同狀態更新；若產品建立限制矩陣，此案例需改版。
 - **資料後置狀態**：每次為指定目標狀態並產生追蹤紀錄。
-- **現有自動化覆蓋**：部分：`DomainEntityTests` 僅從 Pending 測四個 target。
+- **現有自動化覆蓋**：完整：`DomainEntityTests.Task四種狀態應允許任意互轉` 已通過 16 組 Domain 轉換；`TaskApiTests.Task四種狀態應允許三種Api任意互轉並產生追蹤紀錄` 已於 2026-09-16 以真實 SQL Server 分別通過完整修改、被指派者修改及批次修改各 16 組 source→target，並逐類驗證 16 筆 history 與 audit。
 
 #### TC-ERR-TASK-014 單筆修改 rowVersion 衝突
 - **類型與優先級**：Concurrency／P0；**測試層級**：API、SQL、UI；**狀態**：Ready
@@ -715,34 +716,34 @@
 - **測試步驟**：A 更新；B 以舊 rowVersion 完整更新、指派者更新或刪除。
 - **預期結果**：B 409 `concurrency_conflict`；UI 保留輸入並提示 reload；A 結果不被覆蓋。
 - **資料後置狀態**：只有 A 異動。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`TaskApiTests` 已驗證完整 PUT、被指派者 PATCH 與 DELETE 使用 stale rowVersion 均回 409，且勝出資料不被覆蓋；`taskFormView.spec.ts.Task更新衝突時保留完整輸入並顯示可重試錯誤` 驗證 UI 409 復原契約。
 
 #### TC-F-TASK-015 批次狀態更新成功
-- **類型與優先級**：Functional／P0；**測試層級**：Service、API、SQL、UI；**狀態**：Planned（GAP-007）
+- **類型與優先級**：Functional／P0；**測試層級**：Service、API、SQL、UI；**狀態**：Ready
 - **對應需求**：US-2；批次 Flowchart
 - **前置條件**：選取 1 或 10 筆，皆有權且 rowVersion 最新。
 - **測試步驟**：分別以 1、10 筆確認視窗檢查筆數／目標；送 batch-status；查詢 Task、history、audit；重載 UI。
 - **預期結果**：200 `updatedCount=X`；同一 transaction 全部改為目標狀態；每筆有 history/audit；清除選取並顯示成功筆數。
 - **資料後置狀態**：所有選取 Task 一致更新。
-- **現有自動化覆蓋**：無；目前 UI 與 Backend 都沒有單批 10 筆上限。
+- **現有自動化覆蓋**：完整：`TaskApiTests` 已以真實 SQL Server 驗證 1／10 筆成功、updatedCount、逐筆 history/audit；`taskListView.spec.ts` 已驗證確認內容、1／10 筆 request、updatedCount 成功訊息、重新載入與成功清除選取。
 
 #### TC-ERR-TASK-016 批次資料任一筆失敗全部 rollback
-- **類型與優先級**：Transaction／P0；**測試層級**：Service、API、SQL、UI；**狀態**：Planned（GAP-008）
+- **類型與優先級**：Transaction／P0；**測試層級**：Service、API、SQL、UI；**狀態**：Ready
 - **對應需求**：US-2；批次 Flowchart
 - **前置條件**：混入無權、跨 Project、不存在或 stale rowVersion 任一筆。
 - **測試步驟**：對每類錯誤各送一批；失敗後查全部 Task/history/audit。
 - **預期結果**：含無權項目時，即使同批另含不存在項目也優先回 403；全部已授權但含不存在項目才回 404；版本衝突回 409；沒有任何 Task 更新，也不留下該批 history/audit；UI 保留原畫面與選取並顯示原因。
 - **資料後置狀態**：整批不變。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`TaskApiTests` 已驗證無權＋不存在優先 403、全部已授權但不存在 404、stale rowVersion 409，以及失敗時其他 Task／history／audit 不變；`taskListView.spec.ts.批次更新失敗時保留清單與選取並顯示錯誤` 已於 2026-09-16 驗證 UI 不自動重載、不清除選取、保留原資料並顯示後端錯誤。
 
 #### TC-ERR-TASK-017 空批次、重複 Task ID 與超過 10 筆
-- **類型與優先級**：Error／P0；**測試層級**：API、UI；**狀態**：Planned（GAP-007）
+- **類型與優先級**：Error／P0；**測試層級**：API、UI；**狀態**：Ready
 - **對應需求**：US-2；API contract
 - **前置條件**：已登入。
 - **測試步驟**：1. 送空 tasks。2. 同一 taskId 兩次（相同或不同 rowVersion）。3. UI 勾選 11 筆。4. 繞過 UI 直接送 11 筆 API request。
 - **預期結果**：空集合回 400 `validation_error`；重複 ID 回 400 `duplicate_task`；UI 保留 11 筆選取但停用送出並提示上限；API 對 11 筆回 400 `validation_error`，不得截斷成前 10 筆。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：無；目前 UI 允許直接送出 11 筆，Backend 亦未拒絕。
+- **現有自動化覆蓋**：完整：`TaskApiTests` 已驗證空集合、重複 ID、11 筆 API 均拒絕且不更新；`taskListView.spec.ts` 已驗證 UI 保留 11 筆選取、停用送出、提示上限，回到 10 筆才送出且不截斷。
 
 #### TC-ST-TASK-018 批次確認取消與偏好略過
 - **類型與優先級**：State／P1；**測試層級**：UI、E2E；**狀態**：Ready
@@ -751,7 +752,7 @@
 - **測試步驟**：false 時取消再確認；true 時直接送出。
 - **預期結果**：取消不呼叫 API且不改資料；確認才送；true 不開視窗但仍只更新選取資料。
 - **資料後置狀態**：取消時不變；成功時依批次結果更新。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`taskListView.spec.ts` 已於 2026-09-15 在同一測試通過 false 偏好取消不送出、false 偏好確認後送出，以及 true 偏好不顯示確認並只送出選取 Task；`TaskApiTests` 已驗證批次 API 的授權與資料異動。
 
 #### TC-F-TASK-019 軟刪除 Task 並保留關聯
 - **類型與優先級**：Data integrity／P0；**測試層級**：API、SQL、UI；**狀態**：Ready
@@ -760,7 +761,7 @@
 - **測試步驟**：開刪除確認，確認後 DELETE；查一般 API 與 IgnoreQueryFilters 的 DB 資料。
 - **預期結果**：204；一般清單／詳情不顯示；Task DeletedAt 有值；留言、既有／新增刪除 history 與 audit 保留；沒有 cascade delete。
 - **資料後置狀態**：Task 軟刪除，關聯紀錄可稽核。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`TaskApiTests` 已驗證 204、一般 list/detail 排除、IgnoreQueryFilters 可讀 DeletedAt、Comment／既有與刪除 History／Audit 均保留；`taskListView.spec.ts.刪除Task取消不送出各類失敗保留清單且成功才重新載入` 驗證確認文、取消、403／409／500 復原、成功 reload 與提示。
 
 #### TC-ST-TASK-020 刪除確認取消與失敗保留畫面
 - **類型與優先級**：State／P1；**測試層級**：UI；**狀態**：Ready
@@ -769,7 +770,7 @@
 - **測試步驟**：點刪除並核對標題／說明；先取消；再模擬 403/409/5xx。
 - **預期結果**：確認文含 Task 標題與軟刪除影響；取消不送 request；失敗保留畫面並顯示錯誤；成功才回清單與提示。
 - **資料後置狀態**：取消／失敗不變。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`taskListView.spec.ts` 已於 2026-09-15 驗證確認文包含 Task 標題與軟刪除影響、取消不送 request，以及 403／409／500 失敗時保留清單並顯示 API 錯誤；成功路徑的 API／SQL 與清單 reload 另由 TC-F-TASK-019 及既有元件流程覆蓋。
 
 #### TC-F-TASK-021 Task 詳情完整欄位、唯讀呈現與編輯導向
 - **類型與優先級**：Functional／P0；**測試層級**：API、UI、E2E；**狀態**：Ready
@@ -778,16 +779,16 @@
 - **測試步驟**：各角色由清單開啟 `/projects/{projectId}/task-items/{taskId}`；核對所有欄位、留言區、編輯控制與返回；有修改權角色點擊編輯後取消。
 - **預期結果**：顯示 Task 編號、標題、描述、開始時間、交付期限、建立者、指派對象、狀態、建立與最後更新時間；詳情頁不提供 Task 欄位內聯儲存；Viewer 沒有編輯／留言控制，被指派者與後台管理者依權限顯示編輯入口並導向 `/admin/projects/{projectId}/task-items/{taskId}/edit` 且預填目前資料；取消或返回後保留原清單 query。
 - **資料後置狀態**：檢視、取消與返回皆不異動 Task；瀏覽器保留原清單條件。
-- **現有自動化覆蓋**：無；現有 E2E 未直接覆蓋 Task 詳情完整欄位與角色化操作。
+- **現有自動化覆蓋**：完整：`taskDetailView.spec.ts` 驗證完整唯讀欄位、隱藏 rowVersion、Viewer 無編輯／留言控制、被指派者編輯導向及返回 query；`taskFormView.spec.ts` 驗證完整預填；`app.spec.ts.Admin可建立專案與Task` 已於 2026-09-16 在 desktop／mobile 核對 Task 編號、標題、描述、狀態、開始／期限、建立者／指派者、建立／更新時間，並驗證編輯導向、預填與取消返回詳情。
 
 #### TC-ERR-TASK-022 修改 Task 的欄位、指派者與日期驗證
-- **類型與優先級**：Error／P0；**測試層級**：Service、API、SQL、UI；**狀態**：Planned（CON-008）
+- **類型與優先級**：Error／P0；**測試層級**：Service、API、SQL、UI；**狀態**：Ready
 - **對應需求**：US-7；US-4 被指派者可修改期限；新增與修改 Task Flowchart；CON-008
 - **前置條件**：後台管理者與 Task 被指派者皆持有最新 rowVersion；另準備不存在、其他 Project 與已移除的成員。
 - **測試步驟**：1. 完整 PUT 分別送空白／301 字標題、description 空值／純空白／8000／8001 字、三種無效 assignee，以及 startAt 晚於 deadline。2. 被指派者 PATCH deadline 為等於及早於既有 startAt。3. 每次失敗後查 Task、history、audit。
 - **預期結果**：合法邊界可保存；空白／超長欄位回 400 `validation_error`，無效 assignee 回 422 `invalid_assignee`，不合法日期回 422 `invalid_deadline`；被指派者 deadline 等於 startAt 可成功，早於 startAt 被拒絕；失敗時 UI 保留輸入，Task、history、audit 均不變。
 - **資料後置狀態**：只有合法邊界案例更新 Task 並產生對應追蹤；失敗案例完全不變。
-- **現有自動化覆蓋**：部分：Frontend 已有元件測試鎖定 Description 選填與 8000 字上限；Backend 共用標題／指派者／日期驗證，但尚未在寫入 DB 前驗證 Description 8000 字上限。
+- **現有自動化覆蓋**：完整：`TaskApiTests` 已驗證完整 PUT 的 title／description／assignee／日期錯誤、被指派者 deadline 等於 startAt 成功與早於 startAt 失敗，並確認失敗不留 history/audit；`formValidationContracts.spec.ts` 鎖定 Title／Description 邊界，`taskFormView.spec.ts.Task更新衝突時保留完整輸入並顯示可重試錯誤` 驗證錯誤復原，欄位錯誤的真實 UI/API 另由 Task 建立 E2E 驗證。
 
 ### 4.5 Task 留言
 
@@ -798,7 +799,7 @@
 - **測試步驟**：讀取 comments。
 - **預期結果**：只回未刪除留言，依 CreatedAt 升冪；顯示作者、內容、時間；Viewer 可讀。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`CommentApiTests` 已驗證只回未刪除留言、CreatedAt 升冪、完整 DTO 與 Viewer 可讀；`taskDetailView.spec.ts` 已於 2026-09-15 驗證 Viewer 可見作者、內容與建立時間。
 
 #### TC-F-CMT-002 新增 1–2000 字留言
 - **類型與優先級**：Functional／P0；**測試層級**：API、SQL、UI；**狀態**：Ready
@@ -807,7 +808,7 @@
 - **測試步驟**：分別送 1 字、2000 字與含前後空白／換行內容。
 - **預期結果**：200；內容 trim 後保存、換行保留；作者取目前 token 而非 request；寫 audit；UI 重新載入留言串。
 - **資料後置狀態**：新增留言與 audit。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`CommentApiTests` 已驗證 1／2000 字、前後空白 trim、換行保留、作者取 token、SQL 留言與 audit；`taskDetailView.spec.ts.留言儲存失敗保留原始草稿且明確重送後才重新載入` 驗證新增成功後清空草稿、顯示成功並重新載入留言串。
 
 #### TC-ERR-CMT-003 空白與 2001 字留言
 - **類型與優先級**：Edge／P1；**測試層級**：API、UI；**狀態**：Ready
@@ -816,7 +817,7 @@
 - **測試步驟**：送空字串、全空白、2001 字；編輯也重複測試。
 - **預期結果**：400 `validation_error`；UI 保留內容並顯示錯誤；DB 不變。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`CommentApiTests` 已驗證新增與編輯的空字串、全空白、2001 字均回 400 `validation_error` 且 SQL 不新增；`taskDetailView.spec.ts` 已於 2026-09-15 驗證 UI 拒絕全空白／2001 字、保留草稿並顯示長度錯誤。
 
 #### TC-ST-CMT-004 作者修改留言
 - **類型與優先級**：State／P1；**測試層級**：API、SQL、UI；**狀態**：Ready
@@ -825,7 +826,7 @@
 - **測試步驟**：編輯自己的留言並重載。
 - **預期結果**：200、新 rowVersion、UpdatedAt 更新；內容與 audit 前後值正確。
 - **資料後置狀態**：保存新內容與稽核。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`CommentApiTests` 已驗證作者更新、trim／換行、新 rowVersion、UpdatedAt 與 SQL audit；`taskDetailView.spec.ts.留言儲存失敗保留原始草稿且明確重送後才重新載入` 驗證作者編輯、失敗保留與成功後重新載入。
 
 #### TC-ERR-CMT-005 非作者或 Viewer 不可修改／刪除
 - **類型與優先級**：Security／P0；**測試層級**：API、UI；**狀態**：Ready
@@ -834,7 +835,7 @@
 - **測試步驟**：直接 PUT/DELETE 他人留言；觀察 UI 控制。
 - **預期結果**：403；非作者不顯示編輯／刪除；Viewer 不顯示新增；內容不變。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`CommentApiTests` 已驗證同 Project 非作者與 Viewer 的 PUT／DELETE 皆回 403 且資料不變；`taskDetailView.spec.ts` 已於 2026-09-15 驗證非作者／Viewer 看不到編輯、刪除及新增留言控制。
 
 #### TC-ERR-CMT-006 留言 rowVersion 衝突
 - **類型與優先級**：Concurrency／P1；**測試層級**：API、SQL、UI；**狀態**：Ready
@@ -843,7 +844,7 @@
 - **測試步驟**：A 修改；B 用舊版修改與刪除。
 - **預期結果**：B 409 `concurrency_conflict`；保留 B 未送出內容並提示重新載入；A 資料不被覆蓋。
 - **資料後置狀態**：只保留 A 異動。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`CommentApiTests` 已驗證 stale rowVersion 更新／刪除皆回 409 且勝出內容與版本不被覆蓋；`taskDetailView.spec.ts` 已於 2026-09-15 驗證 UI 顯示 409 訊息、保留編輯草稿且不重新載入覆蓋內容。
 
 #### TC-ST-CMT-007 軟刪除自己的留言
 - **類型與優先級**：State／P1；**測試層級**：API、SQL、UI；**狀態**：Ready
@@ -852,7 +853,7 @@
 - **測試步驟**：取消一次刪除；再確認；讀留言與 DB。
 - **預期結果**：取消不送 request；確認 204；一般留言串不再顯示；DB DeletedAt 與 audit 保留。
 - **資料後置狀態**：留言軟刪除。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`CommentApiTests` 已驗證 204、一般留言串排除、SQL DeletedAt 與 audit；`taskDetailView.spec.ts` 已於 2026-09-15 驗證取消不送 request、確認成功才送出並重新載入留言串。
 
 #### TC-ERR-CMT-008 跨 Task／Project comment ID
 - **類型與優先級**：Security／P0；**測試層級**：API；**狀態**：Ready
@@ -861,7 +862,7 @@
 - **測試步驟**：用 B Project 或 B Task route 讀／改／刪該留言。
 - **預期結果**：不得洩漏或異動留言；對 route 的 Project scope 無權時一律先回 403，不因留言／Task 不存在改回 404；已授權 scope 內資源不存在才回 404。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`CommentApiTests` 已驗證跨 Task 更新／刪除與已授權 scope 內不存在資源回 404，以及無 Project scope 時對存在／不存在／跨資源路徑一律先回 403。
 
 #### TC-ERR-CMT-009 留言儲存失敗時保留未送出內容
 - **類型與優先級**：Failure／P1；**測試層級**：Service、API、UI；**狀態**：Ready
@@ -870,117 +871,117 @@
 - **測試步驟**：1. 輸入含換行的留言並觸發新增儲存失敗。2. 編輯既有留言並觸發失敗。3. 檢查 UI draft、留言串、DB 與 audit。4. 恢復服務後由使用者重送一次。
 - **預期結果**：失敗時顯示可重試的一般錯誤，輸入內容保持原樣且不得顯示假成功；DB 不留下半套留言或成功 audit；恢復後只在使用者明確重送時建立／修改一次並重新載入留言串。
 - **資料後置狀態**：失敗階段資料不變；重送成功後恰有一次留言異動及對應 audit。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`CommentApiTests` 以一次性 EF 儲存失敗驗證新增／更新皆回 500、留言與 audit 無半套資料，恢復後明確重送只異動一次；`taskDetailView.spec.ts` 模擬 timeout／5xx，驗證新增與編輯草稿原樣保留、不顯示假成功、不自動重送，明確重送成功後才清空並重新載入。
 
-### 4.6 Task 到期提醒（全部 Planned）
+### 4.6 Task 到期提醒
 
 #### TC-ST-REM-001 七日提醒視窗
-- **類型與優先級**：State／P0；**測試層級**：Unit、Service、SQL；**狀態**：Planned
+- **類型與優先級**：State／P0；**測試層級**：Unit、Service、SQL；**狀態**：Ready
 - **對應需求**：US-5；Email 到期提醒 Flowchart
 - **前置條件**：Project 具有合法 IANA TimeZoneId；固定 UTC now 與 Project 當地日期；未完成 Task。
 - **測試步驟**：在 Project 當地時間每日 08:00 執行掃描，資料驅動測 deadline 當地日期相對今天 -4 至 +4 天（到期前以正向天數表示）。
 - **預期結果**：只在到期前 3/2/1 天、當天、逾期 1/2/3 天建立每日提醒；UTC 日期不同不得影響 Project 當地日期判斷；其餘不建立。
 - **資料後置狀態**：每個有效日期一筆 Pending reminder。
-- **現有自動化覆蓋**：無；功能尚未實作。
+- **現有自動化覆蓋**：完整：`ReminderServiceTests.掃描應只建立到期前後三日提醒並提供可取消的正確摘要` 以固定 TimeProvider 與實際 SQL Server 驗證 -4 至 +4 日、Project 當地日期、唯一提醒與掃描摘要。
 
 #### TC-ERR-REM-002 Completed Task 不提醒
-- **類型與優先級**：Error／P0；**測試層級**：Service、SQL；**狀態**：Planned
+- **類型與優先級**：Error／P0；**測試層級**：Service、SQL；**狀態**：Ready
 - **對應需求**：US-5
 - **前置條件**：期限在視窗內，status=Completed。
 - **測試步驟**：執行掃描；另在 Pending 建立後、寄送前把 Task 完成。
 - **預期結果**：掃描不建立；寄送前重查時標記 Cancelled，不呼叫 Email provider。
 - **資料後置狀態**：無 reminder 或既有 reminder=Cancelled。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`ReminderServiceTests.寄送前重查應取消已失效提醒且不得呼叫Provider` 合併驗證掃描前 Completed 不建立及寄送前 Completed 標記 Cancelled、不呼叫 provider。
 
 #### TC-ERR-REM-003 收件人停用或未驗證
-- **類型與優先級**：Security／P0；**測試層級**：Service、SQL；**狀態**：Planned
+- **類型與優先級**：Security／P0；**測試層級**：Service、SQL；**狀態**：Ready
 - **對應需求**：US-5
 - **前置條件**：期限在視窗內；收件人分別停用／未驗證。
 - **測試步驟**：掃描；若掃描後才變更狀態，再執行寄送 worker。
 - **預期結果**：掃描記錄略過或寄送前 Cancelled；不寄信。
 - **資料後置狀態**：可追蹤略過／取消原因。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：同一寄送前重查合併測試驗證停用、未驗證與無效 Email 均不寄送，並保留略過／取消原因。
 
 #### TC-ERR-REM-004 排程重複與多 worker 去重
-- **類型與優先級**：Concurrency／P0；**測試層級**：Service、SQL；**狀態**：Planned
+- **類型與優先級**：Concurrency／P0；**測試層級**：Service、SQL；**狀態**：Ready
 - **對應需求**：US-5；提醒 Flowchart
 - **前置條件**：同 Task、recipient、reminderDate；兩 scheduler／worker。
 - **測試步驟**：並行掃描及並行 claim/send。
 - **預期結果**：唯一限制只建立一筆；只有一個 worker 取得寄送權；最多一次 provider 呼叫。
 - **資料後置狀態**：單一 reminder，狀態一致。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`ReminderServiceTests.並行掃描與寄送應最多建立並寄出一次且完整記錄成功` 以 SQL UNIQUE constraint 與原子 claim 驗證多 scanner／worker 最多建立、寄送一次。
 
 #### TC-F-REM-005 寄送成功判定
-- **類型與優先級**：Functional／P0；**測試層級**：Service、SQL；**狀態**：Planned
+- **類型與優先級**：Functional／P0；**測試層級**：Service、SQL；**狀態**：Ready
 - **對應需求**：US-5
 - **前置條件**：Pending reminder；provider 回成功與 response ID。
 - **測試步驟**：worker claim、重查、組信、寄送、寫回。
 - **預期結果**：信件含期限與 Task link；只有 provider 成功且 SentAt/response ID 寫入成功才標 Sent。
 - **資料後置狀態**：Sent、SentAt、response ID 完整。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：並行寄送合併測試驗證信件內容、provider response ID、SentAt 與 Sent 狀態只在 provider 與 DB 寫回皆成功後成立。
 
 #### TC-ST-REM-006 初次失敗後最多重試三次
-- **類型與優先級**：State／P0；**測試層級**：Service、SQL；**狀態**：Planned
+- **類型與優先級**：State／P0；**測試層級**：Service、SQL；**狀態**：Ready
 - **對應需求**：US-5
 - **前置條件**：provider 持續失敗。
 - **測試步驟**：固定 TimeProvider；執行初次寄送，分別在失敗後 4:59／5:00、14:59／15:00、59:59／60:00 驗證三次 retry，再觸發一次。
 - **預期結果**：總嘗試最多 4 次；三次 retry 分別只在 5、15、60 分鐘到期後執行；第 4 次總嘗試失敗後標為 Failed，同時寫入 DB 與結構化 log 告警，不再排程。
 - **資料後置狀態**：Failed、retryCount=3、保留錯誤與告警。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`ReminderServiceTests.持續寄送失敗應精確重試三次後標記Failed並寫安全Log` 驗證 5／15／60 分鐘邊界、總嘗試四次、DB Failed／AlertedAt 與不含 Email、Token 的 Warning Log。
 
 #### TC-ST-REM-007 重試後成功
-- **類型與優先級**：State／P1；**測試層級**：Service、SQL；**狀態**：Planned
+- **類型與優先級**：State／P1；**測試層級**：Service、SQL；**狀態**：Ready
 - **對應需求**：US-5
 - **前置條件**：初次失敗，第二次 provider 成功。
 - **測試步驟**：初次寄送、排 retry、執行 retry。
 - **預期結果**：最終 Sent；retryCount 正確；不再重試；錯誤歷程可追蹤。
 - **資料後置狀態**：Sent 與 provider response ID。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`ReminderServiceTests.重試成功後應標記Sent並停止後續重試` 驗證第一次 retry 成功後不再排程並保存 response ID。
 
 #### TC-ERR-REM-008 Provider 接受但成功紀錄寫回失敗
-- **類型與優先級**：Failure／P1；**測試層級**：Service、SQL；**狀態**：Planned
+- **類型與優先級**：Failure／P1；**測試層級**：Service、SQL；**狀態**：Ready
 - **對應需求**：提醒 Flowchart 的 at-least-once 風險
 - **前置條件**：provider 已接受；DB 寫回失敗。
 - **測試步驟**：模擬成功 response 後 DB 例外，再重試。
 - **預期結果**：記錄失敗／可重試；若 provider 支援 idempotency key，以 reminder ID 防重；否則明確記錄極少數重複風險。
 - **資料後置狀態**：不得錯誤標 Sent；具可診斷狀態。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`ReminderServiceTests.Provider接受但成功寫回失敗時不得誤標Sent且應以相同Key重試` 以一次性 EF interceptor 驗證寫回失敗不誤標 Sent，並以相同 reminder ID idempotency key 重試。
 
 #### TC-ST-REM-009 每日掃描摘要與取消
-- **類型與優先級**：Operational／P2；**測試層級**：Service、SQL；**狀態**：Planned
+- **類型與優先級**：Operational／P2；**測試層級**：Service、SQL；**狀態**：Ready
 - **對應需求**：ImplementationBacklog BE-001
 - **前置條件**：混合成功建立、重複、略過、無符合資料。
 - **測試步驟**：執行掃描，檢查摘要與 cancellation。
 - **預期結果**：摘要數量與原因正確；CancellationToken 中止後不繼續建立／寄送，已提交資料保持一致。
 - **資料後置狀態**：只有中止前已完成的原子操作存在。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：七日視窗測試驗證摘要與 cancellation；`ReminderServiceTests.啟用ReminderJobs時應在Hangfire註冊Scanner與Sender` 另驗證兩個 minutely recurring jobs 實際寫入 Hangfire SQL storage。
 
 #### TC-ST-REM-010 多 Project 時區皆於當地 08:00 執行
-- **類型與優先級**：State／P0；**測試層級**：Unit、Service；**狀態**：Planned（OPEN-005）
+- **類型與優先級**：State／P0；**測試層級**：Unit、Service；**狀態**：Ready
 - **對應需求**：US-5；GAP-012；OPEN-005
 - **前置條件**：至少三個不同 UTC offset 的 IANA TimeZoneId Project，Task 皆在提醒視窗內；固定 TimeProvider。
 - **測試步驟**：沿 UTC 時間軸推進並逐分鐘執行 scheduler 判斷；記錄各 Project scanner 的當地執行時間。
 - **預期結果**：正常運行時每個 Project 於當地日 08:00 取得一次掃描資格；若 08:00 未執行，當地日內恢復後仍可取得一次補跑資格；不得以伺服器本機時區統一判斷，同一 UTC 時刻可執行零至多個 Project。
 - **資料後置狀態**：每 Project／當地提醒日期最多建立一批符合資格的 reminder。
-- **現有自動化覆蓋**：無；Project timezone 與 scheduler 尚未實作。
+- **現有自動化覆蓋**：完整：`ReminderServiceTests.多時區掃描應在各Project當地八點後同日補跑且Dst不重複` 以三個 IANA timezone 與固定 UTC 時間軸驗證各 Project 當地 08:00 及同日補跑。
 
 #### TC-ERR-REM-011 DST、08:00 漏跑與告警查詢
-- **類型與優先級**：Operational／P1；**測試層級**：Service、SQL；**狀態**：Planned（OPEN-010）
+- **類型與優先級**：Operational／P1；**測試層級**：Service、SQL；**狀態**：Ready
 - **對應需求**：US-5；OPEN-010
 - **前置條件**：使用有 DST 的 IANA timezone；可模擬 scheduler 在 08:00 停機及最終寄送失敗。
 - **測試步驟**：測 DST 切換日、08:00 前後停機／恢復、同一當地時間重複，以及達到 retry 上限後的營運查詢。
 - **預期結果**：以 Project 當地日期作為冪等鍵，DST 重複／跳時不得重複或遺漏；08:00 漏跑後在同一當地日恢復即補跑，跨日不補前一日；最終 Failed 同時寫 DB 與結構化 log，本期不提供管理 UI。
 - **資料後置狀態**：每 Project／當地日期最多一批 reminder；補跑與最終失敗均可由 DB／log 追蹤。
-- **現有自動化覆蓋**：無；需求已決議，功能與自動化尚未實作。
+- **現有自動化覆蓋**：完整：多時區測試涵蓋 DST／同日補跑／跨日不補；持續失敗測試涵蓋 DB 與安全結構化 Log 告警，本期依決議不提供管理 UI。
 
 #### TC-ST-REM-012 寄送前 Task 改期、改派或軟刪除
-- **類型與優先級**：State／P0；**測試層級**：Service、SQL；**狀態**：Planned
+- **類型與優先級**：State／P0；**測試層級**：Service、SQL；**狀態**：Ready
 - **對應需求**：US-5；Email 到期提醒 Flowchart 的寄送前重查
 - **前置條件**：已為未完成 Task 與原收件人建立 Pending reminder，但尚未呼叫 Email provider。
 - **測試步驟**：分別在 reminder 建立後、worker 執行寄送前重查之前，將 Task 期限移出當日提醒視窗、改派給另一成員或軟刪除，再執行寄送；下一次掃描檢查新期限／新收件人的資格。
 - **預期結果**：舊 reminder 在寄送前重查後標記 Cancelled 且不寄給原收件人；改派不沿用舊收件人紀錄，新收件人僅在符合其提醒日期時建立獨立唯一紀錄；軟刪除 Task 不再建立提醒；狀態與取消原因可追蹤。
 - **資料後置狀態**：舊 reminder=Cancelled；不產生錯誤收件或重複寄送；後續只保留依最新 Task 狀態合法建立的 reminder。
-- **現有自動化覆蓋**：無；功能尚未實作。
+- **現有自動化覆蓋**：完整：寄送前重查合併測試驗證完成、改期、改派、軟刪除與帳號失效後舊提醒皆 Cancelled 且不誤寄，後續掃描只依最新狀態建立合法提醒。
 
 ### 4.7 SQL、API 共通與平台
 
@@ -1009,16 +1010,16 @@
 - **測試步驟**：一般 EF/API 查詢與 IgnoreQueryFilters 查詢。
 - **預期結果**：一般查詢排除軟刪除；稽核查詢仍能取得；歷史與關聯未 cascade 消失。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`DatabaseModelTests.三種軟刪除實體都應設定QueryFilter` 驗證 EF model contract；`SqlServerConstraintTests.三種軟刪除實體應由一般查詢排除但稽核查詢與歷史仍保留` 已於 2026-09-15 以實際 SQL Server 驗證 Project／Task／Comment 一般查詢排除、`IgnoreQueryFilters` 可讀及 Task history 保留；Task／Comment API 排除與關聯保存另由 `TaskApiTests`、`CommentApiTests` 驗證。
 
 #### TC-SQL-004 FK 與刪除行為
-- **類型與優先級**：Data integrity／P1；**測試層級**：SQL；**狀態**：Planned（OPEN-009；其餘既有 FK 可先執行）
+- **類型與優先級**：Data integrity／P1；**測試層級**：SQL；**狀態**：Ready
 - **對應需求**：DB；OPEN-009
 - **前置條件**：完整關聯資料。
 - **測試步驟**：嘗試刪除被 Project/Task/history/comment/audit 參照的 Account、Project、Task；另刪除 membership，並嘗試刪除被 Projects.DeletedByAccountId 參照的 Account。
 - **預期結果**：既有 Restrict/NoAction 防止遺失歷史；刪 membership 僅 cascade 其 ProjectMemberRoles；Identity 支援資料依 migration 規則處理；被 DeletedByAccountId 參照的 Account 因 NoAction 不得刪除。
 - **資料後置狀態**：失敗刪除不破壞參照完整性。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`SqlServerConstraintTests.關聯資料應以Restrict或NoAction保存歷史且Membership僅Cascade角色` 已於 2026-09-16 15:47:48（Asia/Taipei，UTC+08:00）以實際 SQL Server 驗證 Account 同時被 Project owner、Task creator／assignee、Task history、Comment 與 Audit 參照時不得刪除，被 `Projects.DeletedByAccountId` 參照的 Account 亦受 NoAction 保護；Project 與 Task 的實體刪除被子資料／歷史阻擋。刪除 membership 成功時只 cascade 對應 `ProjectMemberRoles`，Project、Task、Comment、History 與 Audit 均保留。
 
 #### TC-SQL-005 rowversion 自動更新與 Base64 round-trip
 - **類型與優先級**：Concurrency／P0；**測試層級**：SQL、API；**狀態**：Ready
@@ -1027,34 +1028,34 @@
 - **測試步驟**：讀 Base64 rowVersion、成功更新、比較新舊值、原樣回傳新值再更新。
 - **預期結果**：每次 DB 更新 rowversion 改變；API Base64 可 round-trip；空白／非法 Base64 視為 409 conflict，不造成 500。
 - **資料後置狀態**：僅合法版本更新。
-- **現有自動化覆蓋**：`ApiSurfaceTests` 只確認 schema 有 rowVersion。
+- **現有自動化覆蓋**：完整：`DatabaseModelTests` 驗證 EF rowversion contract；`SqlServerConstraintTests` 已於 2026-09-15 以實際 SQL Server 驗證 Project／Task／Comment 連續兩次成功更新皆產生不同 rowversion 且可 Base64 round-trip；`ProjectApiTests`、`TaskApiTests`、`CommentApiTests` 已驗證 API 回傳版本可原樣更新，stale／空白／非法 Base64 均回 409 且資料不變。
 
 #### TC-SQL-006 Audit 與 History 不相信 request 操作者
-- **類型與優先級**：Security／P0；**測試層級**：Service、SQL；**狀態**：Planned（GAP-009；其餘既有異動可先執行）
+- **類型與優先級**：Security／P0；**測試層級**：Service、SQL；**狀態**：Ready
 - **對應需求**：各異動 Flowchart、DB
 - **前置條件**：登入 actor 與目標 account 不同。
 - **測試步驟**：建立／修改／刪除 Project、Member、Task、Comment、User；檢查記錄。
 - **預期結果**：ActorAccountId 來自 JWT current user；action/entity/time/必要前後快照正確；Task history actor 亦正確。
 - **資料後置狀態**：每個成功異動有可追溯紀錄；失敗異動無成功稽核。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：TC-SQL-006 已合併進既有 Project、Member、Task、Comment、User API 案例，避免重複執行相同異動。2026-09-16 15:47:48（Asia/Taipei，UTC+08:00）目標案例 Passed 9／Failed 0／Skipped 0，驗證 actor 與目標帳號不同時，Project create/delete、Member add/update/remove、Task create/update、Comment update、User administration 的 `ActorAccountId` 均來自 JWT current user；action、entity、CreatedAt、必要 before／after snapshot 正確，Task History actor／snapshot 正確。無效 Owner、未完成 Task 阻擋移除、非作者／Viewer 拒絕等失敗異動不產生成功 Audit／History；其他 create／delete 與批次路徑由同檔既有合併案例驗證相同 ServiceSupport 契約。
 
 #### TC-SQL-007 重複 Email DB constraint
-- **類型與優先級**：Data integrity／P0；**測試層級**：SQL、API；**狀態**：Planned（GAP-010、OPEN-006、OPEN-015）
+- **類型與優先級**：Data integrity／P0；**測試層級**：SQL、API；**狀態**：Ready
 - **對應需求**：AUTH、DB；OPEN-015
 - **前置條件**：已將 NormalizedEmail 改為 NOT NULL 並新增無 filter UNIQUE index；準備含重複 normalized Email 與 NULL 的 migration 前資料集。
 - **測試步驟**：1. 以 NULL／重複髒資料執行 migration。2. 人工修正後重跑。3. 繞過 UserManager 並行插入相同 NormalizedEmail。4. 以大小寫不同但正規化後相同的 Email 註冊。5. 測試 NULL。
 - **預期結果**：髒資料使 migration fail-fast，不自動合併、刪除或任意改寫帳號；人工修正後 migration 成功；NULL 被 NOT NULL 拒絕；重複被 UNIQUE 拒絕；API 競態固定回 409 `duplicate_email` 且含 `errors.email`，不得回 500。
 - **資料後置狀態**：所有 Account 均有唯一且非 NULL 的 NormalizedEmail。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`DatabaseModelTests`、`SqlServerConstraintTests.Accounts應在實際SqlServer拒絕Null與重複NormalizedEmail`、臨時 DB migration fail-fast／人工修正重跑測試，以及 `AuthApiTests` 同 Email 並行註冊測試已驗證只有一筆 201，另一筆固定 409 `duplicate_email` 與 `errors.email`。
 
 #### TC-SQL-008 Refresh Token replacement self-FK
-- **類型與優先級**：Data integrity／P0；**測試層級**：SQL、Service；**狀態**：Planned（GAP-011、OPEN-008）
+- **類型與優先級**：Data integrity／P0；**測試層級**：SQL、Service；**狀態**：Ready
 - **對應需求**：AUTH、DB；GAP-011
 - **前置條件**：已建立 `RefreshTokens.ReplacedByTokenId` nullable self-FK，DeleteBehavior=NoAction。
 - **測試步驟**：1. 建立合法 A→B rotation chain。2. 嘗試寫入不存在的 replacement ID。3. 嘗試實體刪除仍被 A 參照的 B。4. 撤銷 token family 並檢查 chain。
 - **預期結果**：合法 chain 可保存；不存在 ID 被 FK 拒絕；刪除被參照 Token 時由 DB 拒絕，不 cascade 刪除舊 Token；撤銷 family 不破壞參照完整性。
 - **資料後置狀態**：只保留有效參照的 rotation chain；失敗操作完整 rollback。
-- **現有自動化覆蓋**：無；目前欄位只有應用層邏輯參照，尚無 DB FK。
+- **現有自動化覆蓋**：完整：`DatabaseModelTests` 驗證 self-FK 與 NoAction model contract；`SqlServerConstraintTests.RefreshTokenReplacement應由實際SqlServerSelfFk保護且不得Cascade刪除` 驗證合法 A→B chain、未知 replacement 被拒絕、刪除被參照 B 被拒絕與無 cascade。
 
 #### TC-F-API-001 OpenAPI、enum、路由與 Problem Details
 - **類型與優先級**：Contract／P0；**測試層級**：API；**狀態**：Ready
@@ -1063,7 +1064,7 @@
 - **測試步驟**：讀 `/openapi/v1.json` 與 `/swagger/v1/swagger.json`；對 400/401/403/404/409/422/500 代表案例取 response。
 - **預期結果**：核心 routes 與 DTO/enum/rowVersion 一致；錯誤為 RFC 7807 且含 code/traceId，不含 stack、SQL、token。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：部分：`ApiSurfaceTests` 測 OpenAPI 核心 endpoint 與 DTO 欄位。
+- **現有自動化覆蓋**：完整：`ApiSurfaceTests` 已驗證 Bearer、核心 endpoint、主要 DTO 欄位，以及 ProjectStatus／TaskStatus 的完整字串 enum 集合；Auth／User／Project／Task／Comment API 測試已對 400／401／403／404／409／422 的 `code`、`traceId` 與內部資訊遮蔽進行代表性驗證，`CommentApiTests` 並以實際 500 驗證 `internal_server_error`、`traceId` 且不洩漏例外／SQL／token。
 
 #### TC-F-API-002 固定角色、Project Role 與 Function mapping
 - **類型與優先級**：Contract／P0；**測試層級**：API、SQL；**狀態**：Ready
@@ -1072,7 +1073,7 @@
 - **測試步驟**：GET `/roles`、GET `/projects/roles`、GET `/auth/me`；比對 seed 與每角色 functions。
 - **預期結果**：系統角色恰為 Admin/Administrator/User/Viewer；Project Role 恰為五個固定 code；Admin 有全部 functions、Viewer 僅讀 Project/Task/Comment 與自己偏好，其他角色符合 seed。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`UserApiTests.固定角色與FunctionMapping應從實際資料庫完整回傳` 已於 2026-09-13 以真實 SQL Server 通過 `/roles` 四種 System Role 的完整 functions、`/projects/roles` 五種固定 Project Role 與 seed 數量 read-back；`AuthApiTests.已驗證帳號登入應只回AccessToken並由Me回傳正確角色能力` 驗證 `/auth/me`，`DatabaseModelTests.固定角色與FunctionMapping應符合規格` 補充 EF model contract。
 
 #### TC-SEC-API-003 JWT 期限、claims 與 token-version 即時失效
 - **類型與優先級**：Security／P0；**測試層級**：API、SQL；**狀態**：Ready
@@ -1081,7 +1082,7 @@
 - **測試步驟**：解析 token 的 sub/jti/role/permission/token-version、驗簽與 15 分鐘期限；測過期、錯 issuer/audience/signature；異動角色／停用後重用舊 token。
 - **預期結果**：合法 token 可用；所有無效 token 401；角色／狀態異動後舊 token 因版本不符立刻失效；未驗證帳號 token 只含 Viewer 能力。
 - **資料後置狀態**：測試異動依個案保留，無未授權業務寫入。
-- **現有自動化覆蓋**：部分：`HttpCurrentUserTests` 只測 claims 映射。
+- **現有自動化覆蓋**：完整：`AuthApiTests.Jwt應驗證Claims期限IssuerAudienceSignature與帳號TokenVersion` 已於 2026-09-15 解析登入簽發的 sub／jti／role／permission／token-version 與 15 分鐘期限，並以 API 驗證過期、錯 issuer、錯 audience、錯 signature 全部 401；資料庫 TokenVersion 遞增後原合法 token 立即 401。未驗證帳號只含 Viewer 能力另由 Auth Ready 測試覆蓋。
 
 #### TC-F-API-004 Health、CORS 與 OpenAPI 環境邊界
 - **類型與優先級**：Platform／P2；**測試層級**：API；**狀態**：Ready
@@ -1090,16 +1091,16 @@
 - **測試步驟**：GET `/health`；以不同 origin preflight；檢查各環境 `/openapi`、`/swagger`。
 - **預期結果**：health 200 代表應用存活；只允許設定 origin 且 credentials policy 正確；OpenAPI 只在 Development/Testing 或明確開啟時暴露。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：`ApiSurfaceTests` 僅在 Testing 讀 OpenAPI；health/CORS 未覆蓋。
+- **現有自動化覆蓋**：完整：`ApiSurfaceTests` 已於 2026-09-15 驗證 health 200、允許 origin 與 credentials、拒絕未設定 origin，以及 Development／Testing 自動暴露、Production 預設 404、Production 明確開啟 200 的 OpenAPI 與 Swagger 邊界。
 
 #### TC-SEC-API-005 Project scope 的 403 優先於資源 404
-- **類型與優先級**：Security／P0；**測試層級**：Service、API；**狀態**：Planned（GAP-008）
+- **類型與優先級**：Security／P0；**測試層級**：Service、API；**狀態**：Ready
 - **對應需求**：API authorization；GAP-008
 - **前置條件**：準備對 Project A 無權及有權的帳號；Project／Task／Comment／Member 各準備存在與不存在 ID。
 - **測試步驟**：對所有 Project-scoped list/detail/create/update/delete endpoint 執行四格矩陣：無權＋存在、無權＋不存在、有權＋存在、有權＋不存在。
 - **預期結果**：無權＋存在與無權＋不存在皆先回 403 `forbidden`；有權＋存在依操作成功；有權＋不存在才回 404 `not_found`；兩種無權回應不洩漏資源存在性差異。
 - **資料後置狀態**：失敗請求不異動 Project、Task、Comment、Member、history 或 audit。
-- **現有自動化覆蓋**：無；目前各 Service 的授權／查詢順序不完全一致，批次 Task 仍可能先因不存在回 404。
+- **現有自動化覆蓋**：完整：`ProjectApiTests.Project與Member範圍端點應先授權再判斷資源是否存在` 與 `TaskApiTests.Task與Comment範圍端點應先授權再判斷Project是否存在` 已於 2026-09-16 15:39:03（Asia/Taipei，UTC+08:00）通過 2／2；合併既有各 endpoint 成功路徑測試，涵蓋 Project／Member／Task／Comment 的 list、detail、create、update、delete 與 Task 批次／被指派者更新。無權帳號對存在與不存在 Project 均回 403，具功能權限者對不存在 Project／Task 才回 404；失敗請求不產生資料異動。
 
 ### 4.8 UI、導覽、錯誤與可用性
 
@@ -1110,7 +1111,7 @@
 - **測試步驟**：直接開受保護 route；登入；直接開 users／create routes。
 - **預期結果**：未登入導 sign-in 並保存完整 redirect；登入後回原 route；缺 requiredFunction 導 forbidden；Backend 仍獨立驗權。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：部分：`router.spec.ts` 測未登入 redirect。
+- **現有自動化覆蓋**：完整：`router.spec.ts` 已於 2026-09-15 驗證未登入保存完整 redirect，以及 users／Project create／Task create 的 requiredFunction 拒絕與允許矩陣；`app.spec.ts` 已在 desktop／mobile 驗證登出後直接開含 query 的受保護 route、保存完整 redirect，重新登入後返回原 route。
 
 #### TC-F-UI-002 Loading、empty、success 與 error 狀態
 - **類型與優先級**：Functional UX／P1；**測試層級**：UI；**狀態**：Ready
@@ -1128,7 +1129,7 @@
 - **測試步驟**：逐狀態觸發 request；另測非 JSON error、網路中斷、15 秒 timeout、caller cancellation。
 - **預期結果**：語意不混淆；401 只 refresh 一次；409 保留輸入；422 對應業務／欄位；5xx/timeout 可重試且不曝露內部資訊。
 - **資料後置狀態**：失敗操作不出現假成功。
-- **現有自動化覆蓋**：部分：`mockServices.spec.ts` 測 Problem Details、401 與網路 client 的部分路徑。
+- **現有自動化覆蓋**：完整：`mockServices.spec.ts` 已於 2026-09-15 合併驗證 400／403／404／409／422／500 Problem Details、非 JSON 502、網路中斷、15 秒 timeout 與 caller cancellation 的安全且可區分映射；同檔另驗證 401 只 refresh／重送一次。Task／Comment 元件測試補驗 409 保留輸入與 5xx 不顯示假成功。
 
 #### TC-F-UI-004 桌面與手機版導覽
 - **類型與優先級**：Responsive／P1；**測試層級**：UI、E2E；**狀態**：Ready
@@ -1137,7 +1138,7 @@
 - **測試步驟**：檢查 Sidebar、project tree、mobile drawer、backdrop、表格橫向捲動與各表單/detail layout。
 - **預期結果**：桌面 Sidebar 固定；<=900px 用 drawer；<=620px 表單單欄；主要控制可操作且內容不被遮擋。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：部分：`app.spec.ts` 測 mobile drawer 與 desktop 基本頁。
+- **現有自動化覆蓋**：完整：`app.spec.ts` 於 2026-09-16 在 1440×900 與 Pixel 7 驗證固定 Sidebar、手機 drawer／backdrop、關閉抽屜不進入 Tab 順序、表格內橫向捲動、Project／Task 表單的 620px 單欄切換，以及八頁主要內容不造成 viewport overflow；完整隔離 E2E Passed 22／Failed 0／Skipped 0。
 
 #### TC-F-UI-005 鍵盤、焦點、label 與語意
 - **類型與優先級**：Accessibility／P1；**測試層級**：UI、E2E；**狀態**：Ready
@@ -1146,7 +1147,7 @@
 - **測試步驟**：Tab 全流程；操作表單、checkbox、dialog、multi-select、mobile navigation；觸發錯誤與 toast。
 - **預期結果**：可見 focus；label/aria-name 正確；錯誤具 alert、toast 具 status；顏色不是唯一狀態提示；Esc 可關閉 multi-select。
 - **資料後置狀態**：依操作一致。
-- **現有自動化覆蓋**：部分：`multiSelectDropdown.spec.ts` 檢查 ARIA 結構，未做完整鍵盤流程。
+- **現有自動化覆蓋**：完整：`multiSelectDropdown.spec.ts` 檢查 ARIA 結構；`app.spec.ts` 以真實瀏覽器驗證 Tab 與可見 focus、label／aria-name、mobile navigation 鍵盤開啟、checkbox、confirm dialog、multi-select Enter／Esc、錯誤 alert、成功 toast status 與文字狀態 badge。測試期間發現關閉 drawer 仍可 Tab 進入，已修正後完整隔離 E2E 22／22 通過。
 
 #### TC-F-UI-006 語言切換與持久化
 - **類型與優先級**：State／P2；**測試層級**：UI、E2E；**狀態**：Ready
@@ -1155,7 +1156,7 @@
 - **測試步驟**：zh-TW 切 en、reload、登出登入；清除 localStorage。
 - **預期結果**：語言保存於唯一允許的 localStorage key；reload 保留；清除後回 zh-TW；access token/refresh token 不出現在 storage。
 - **資料後置狀態**：僅 locale preference 留在 localStorage。
-- **現有自動化覆蓋**：部分：`app.spec.ts` 測切換與 reload。
+- **現有自動化覆蓋**：完整：`app.spec.ts` 已於 2026-09-15 在 desktop／mobile 真實瀏覽器驗證 zh-TW 切英文、reload 與登出登入後保留、localStorage 僅含 locale key、不含 access／refresh token，以及清除後回 zh-TW；最終連續兩輪通過。
 
 #### TC-SEC-UI-007 使用者內容防 XSS
 - **類型與優先級**：Security／P0；**測試層級**：UI、E2E；**狀態**：Ready
@@ -1164,7 +1165,7 @@
 - **測試步驟**：建立資料並在 list/detail/comment 顯示。
 - **預期結果**：以文字顯示、不執行腳本、不注入 DOM attribute；API／log 不曝露機密。
 - **資料後置狀態**：原始文字可安全保存與顯示。
-- **現有自動化覆蓋**：無。
+- **現有自動化覆蓋**：完整：`taskDetailView.spec.ts` 合併驗證 Task、Comment 與使用者名稱的 escaped text；`app.spec.ts` 另以正式 API 建立含 `<script>`、`<img onerror>` 與特殊字元的 Project，在 list／detail 驗證原文安全顯示、DOM 無 script／事件屬性且全域未執行。Backend Auth／Reminder integration tests 驗證 API 一般化錯誤與 Log 不含帳號、密碼、Email 或 Token。
 
 #### TC-F-UI-008 UI Mock 核心資訊對照
 - **類型與優先級**：Visual contract／P2；**測試層級**：UI；**狀態**：Ready
@@ -1173,26 +1174,26 @@
 - **測試步驟**：逐頁核對 SignIn、SignUp、UserList、UserSetting、ProjectList、ProjectDetail、TaskItemList、TaskItemDetail 的核心資訊與返回操作。
 - **預期結果**：User Story 所需資訊可見；PNG 舊控制與文字契約不同時，以 `UIMock/README.md`、User Story 與 Flowchart 為 pass/fail 依據。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：部分：現有 component/E2E 測試只覆蓋少數頁面結構。
+- **現有自動化覆蓋**：完整：`app.spec.ts` 合併核對 SignIn、SignUp、UserList、UserSetting、ProjectList、ProjectDetail、TaskItemList、TaskItemDetail 的現行文字契約、核心欄位、狀態、操作與返回路徑；舊 PNG 差異以 `UIMock/README.md` 為準，desktop／mobile 皆通過。
 
 ## 5. 覆蓋矩陣
 
 | 需求 | 主要案例 | Happy path | Edge／Error | State／Concurrency | 狀態 |
 |---|---|---:|---:|---:|---|
-| AUTH | AUTH 系列 001–022 | ✓ | ✓ | ✓ | 部分；3 分鐘 Token、重寄／重放與登入 rate limit 皆為 Planned |
+| AUTH | AUTH 系列 001–022 | ✓ | ✓ | ✓ | Ready；Token、重寄／重放、SMTP 失敗 Log 與登入 rate limit 已通過 |
 | US-1 | TASK 系列 001–005 | ✓ | ✓ | ✓ | Ready |
-| US-2 | TASK 系列 006–018、TC-F-PREF-001 | ✓ | ✓ | ✓ | 部分；批次上限與 403 優先序 Planned |
+| US-2 | TASK 系列 006–018、TC-F-PREF-001 | ✓ | ✓ | ✓ | Ready |
 | US-3 | TC-F-AUTH-014、TC-F-TASK-006 | ✓ | ✓ | ✓ | Ready |
 | US-4 | TC-ST-TASK-003、TC-ERR-TASK-005、TC-F-TASK-021、CMT 系列 001–009 | ✓ | ✓ | ✓ | Ready |
-| US-5 | REM 系列 001–012、TC-E-PRJ-011 | ✓ | ✓ | ✓ | Planned；時區、DST、補跑、重試及告警契約已決議 |
-| US-6 | TC-F-TASK-008、TC-ERR-TASK-009 | ✓ | ✓ | ✓ | 部分；Description 契約對齊 Planned |
-| US-7 | TASK 系列 010–014、TC-ERR-TASK-022 | ✓ | ✓ | ✓ | 部分；Description 契約對齊 Planned |
+| US-5 | REM 系列 001–012、TC-E-PRJ-011 | ✓ | ✓ | ✓ | Ready；Project TimeZoneId、Hangfire Scanner／Sender、SQL claim／retry／告警均已完成 |
+| US-6 | TC-F-TASK-008、TC-ERR-TASK-009 | ✓ | ✓ | ✓ | Ready |
+| US-7 | TASK 系列 010–014、TC-ERR-TASK-022 | ✓ | ✓ | ✓ | Ready |
 | US-8 | TC-F-TASK-019、TC-ST-TASK-020、TC-SQL-003 | ✓ | ✓ | ✓ | Ready |
-| FLOW-PRJ | PRJ 系列 001–011 | ✓ | ✓ | ✓ | 部分；欄位邊界、Administrator Owner、TimeZoneId 與 Project 軟刪除 Planned |
+| FLOW-PRJ | PRJ 系列 001–011 | ✓ | ✓ | ✓ | Ready |
 | FLOW-MEMBER | MEMBER 系列 001–009 | ✓ | ✓ | ✓ | Ready |
 | FLOW-USER | USER 系列 001–010 | ✓ | ✓ | ✓ | Ready；現行版本不含個資編輯 |
 | PREF | PREF 系列 001–002 | ✓ | ✓ | ✓ | Ready |
-| API／DB | SQL 系列 001–008、API 系列 001–005 | ✓ | ✓ | ✓ | 部分；403 優先序、Email UNIQUE 與 Refresh Token self-FK Planned |
+| API／DB | SQL 系列 001–008、API 系列 001–005 | ✓ | ✓ | ✓ | Ready；SQL constraint、audit actor／snapshot 與 403／404 全端點矩陣均已完成 |
 | UI／UIMock | UI 系列 001–008 | ✓ | ✓ | ✓ | Ready；舊 PNG 差異依 `UIMock/README.md` |
 
 ## 6. 自動化覆蓋摘要與建議順序
@@ -1202,7 +1203,7 @@
 - Backend Unit：註冊 validator、Bootstrap Admin policy、目前使用者 claims、Domain status／版本／token entity、EF model metadata、SMTP option。
 - Backend Integration：CSRF、註冊 validation Problem Details、OpenAPI surface；實際 SQL Server 的單一角色與業務編號完整性（未設定 `PMW_TEST_SQL_CONNECTION` 時會略過）。
 - Frontend Unit／Component：HTTP client 的 CSRF／Bearer／single-flight refresh／Problem Details、註冊導頁與欄位 mapping、Bootstrap Admin UI 保護、Project Role 複選、少量 Project detail 與 StatusBadge。
-- Frontend E2E：登入、語言、mobile drawer、refresh restore、Admin 建立 Project 與 Task；需實際 Backend、SQL Server 與 `PMW_E2E_PASSWORD`。
+- Frontend E2E：已由隔離腳本即時產生本機密碼並建立獨立 SQL volume，覆蓋登入、完整 redirect、語言唯一 storage key 與持久化、desktop／mobile 導覽、refresh restore、SMTP 失敗註冊／重寄／未驗證 Viewer，以及 Admin 建立 Project 與 Task；每輪自動清除且不讀取本機 SMTP credentials。
 
 ### 6.2 建議自動化優先順序
 
@@ -1213,12 +1214,62 @@
 5. Project member 查詢／加入／角色取代／Owner 移交／未完成 Task 阻擋。
 6. Task／Comment 詳情、驗證、失敗回復、軟刪除、關聯保存與 query filters。
 7. 前端清單 query、返回狀態、checkbox 權限、確認偏好及 403/409/422 UX。
-8. BE-001 實作後，補齊 TC-ST-REM-001～012 與 TC-E-PRJ-011 的 clock-controlled、IANA timezone 與 SQL concurrency 測試。
+8. 維持 TC-SQL-004 與 TC-SQL-006 的資料庫約束與稽核矩陣回歸。
+9. 維持 TC-ST-REM-001～012 的 clock-controlled、IANA timezone、Hangfire 與 SQL concurrency 回歸。
 
 ## 7. 執行注意事項
 
 - SQL 與 transaction 案例必須使用隔離的 SQL Server，不得用 EF InMemory 取代 relational constraint／rowversion／transaction 行為。
 - Email 測試使用可控制的 gateway fake；只有 SMTP smoke test 才連外，且不得記錄完整驗證 token、密碼或 App Password。
 - E2E 每次建立唯一資料並清理；不得依測試順序或既有正式資料。
+- 進入 E2E 階段時，由測試實作一併建立 Playwright 設定、隔離測試帳號與必要環境值；`PMW_E2E_PASSWORD` 是測試帳號的本機執行密碼，應由測試環境產生／注入且不得提交至 Git，不要求需求方預先提供正式帳號或密碼。
+- 測試失敗時，先依錯誤證據判定根因。若產品程式碼未符合已確認規格，必須先補上可重現問題的測試，再修正產品程式碼，重新執行原失敗案例、受影響案例與必要回歸測試；不得藉由放寬 assertion、移除測試或改寫預期結果來掩蓋缺陷。若根因是測試程式、fixture 或環境設定，則修正對應測試基礎設施後重測。每次修正最多嘗試三輪；仍失敗時保留最後進度、錯誤證據與待處理事項。若發現測試案例與規格矛盾，依本文件既定規則暫停並向需求方確認，不得自行以實作反向修改規格。
 - 涉及時間的案例固定 `TimeProvider`、UTC 與 Project IANA timezone；到期提醒以 Project 當地日期作冪等鍵，並依 OPEN-010 的 DST／當日補跑規則驗證。
 - `Planned` 案例不是通過或失敗；它代表必須先完成需求決議或功能實作。
+
+## 8. 最近一次自動化執行紀錄
+
+- **執行時間**：2026-09-13 00:56–01:03（Asia/Taipei，UTC+08:00）
+- **Backend Unit 最終驗證**：`dotnet test tests/ProjectManagementWeb.UnitTests/ProjectManagementWeb.UnitTests.csproj --no-build`；Passed 58、Failed 0、Skipped 0。
+- **Backend 新增狀態轉換**：`dotnet test ... --filter "FullyQualifiedName~DomainEntityTests"`；Passed 36、Failed 0、Skipped 0，其中 Project 16 組與 Task 16 組狀態轉換均通過。
+- **Backend 註冊邊界**：`dotnet test ... --filter "FullyQualifiedName~RegistrationValidatorTests"`；Passed 11、Failed 0、Skipped 0，其中新增的 9 組邊界均通過。
+- **Backend EF model**：`dotnet test ... --filter "FullyQualifiedName~DatabaseModelTests"`；最終 Passed 7、Failed 0、Skipped 0；第一次為編譯失敗，第二次有 1 個測試因讀取 runtime model 的 seed 失敗，修正為 design-time model 後通過。
+- **Backend Integration 基線**：`dotnet test tests/ProjectManagementWeb.IntegrationTests/ProjectManagementWeb.IntegrationTests.csproj`；Passed 4、Failed 0、Skipped 5。當時 5 個實際 SQL Server 案例因缺少 `PMW_TEST_SQL_CONNECTION` 跳過，不得計為通過。
+- **Backend SQL Server 補測**：2026-09-13 12:36:36（Asia/Taipei，UTC+08:00），以本機 Docker SQL Server 執行 `dotnet test tests/ProjectManagementWeb.IntegrationTests/ProjectManagementWeb.IntegrationTests.csproj --no-build --filter "FullyQualifiedName~SqlServerConstraintTests"`；Passed 5、Failed 0、Skipped 0，已驗證單一系統角色 constraint、業務編號日切與類型隔離、10 個並行交易唯一性、rollback 不耗號及每日上限。
+- **Backend Auth API／SQL 新增測試**：2026-09-13 12:59:53（Asia/Taipei，UTC+08:00），執行 `dotnet test tests/ProjectManagementWeb.IntegrationTests/ProjectManagementWeb.IntegrationTests.csproj --no-build --filter "FullyQualifiedName~AuthApiTests"`；連續兩次 Passed 15、Failed 0、Skipped 0，涵蓋 TC-F-AUTH-001、007、011、012、020、TC-ST-AUTH-006、009、013、TC-ERR-AUTH-004、005、008、021、022。TC-ERR-AUTH-005 將六個 Auth endpoint 的三種無效 CSRF 配對合併為單一測試，共驗證 18 條拒絕路徑。第一次執行 TC-ERR-AUTH-008 發現登入失敗被錯誤包成 200，已修正 `AuthController` 的失敗結果映射後重測通過；另修正測試 fixture 對 URL-encoded Cookie 的雜湊比對後通過。
+- **Backend User／Preference／固定角色新增測試**：2026-09-13 13:30:29（Asia/Taipei，UTC+08:00），執行 `dotnet test tests/ProjectManagementWeb.IntegrationTests/ProjectManagementWeb.IntegrationTests.csproj --no-build --filter "FullyQualifiedName~UserApiTests"`；連續兩次 Passed 11、Failed 0、Skipped 0，涵蓋 TC-F-USER-001、007、009、TC-ST-USER-003、TC-ERR-USER-002、004、005、006、010、TC-E-USER-008、TC-F-PREF-001、TC-ERR-PREF-002、TC-F-API-002。最後 Admin 並行案例實際驗證兩個請求只有一個成功且至少保留一位有效 Admin；OPEN-016 的 403／404 規則已同步並通過。
+- **Backend Project／Member 新增測試**：2026-09-13 13:42:48（Asia/Taipei，UTC+08:00），執行 `dotnet test tests/ProjectManagementWeb.IntegrationTests/ProjectManagementWeb.IntegrationTests.csproj --no-build --filter "FullyQualifiedName~ProjectApiTests"`；連續兩次 Passed 10、Failed 0、Skipped 0，涵蓋 TC-F-PRJ-001、002、TC-ERR-PRJ-007、TC-F-MEMBER-001、002、008、TC-ERR-MEMBER-003、004、006、007、009、TC-ST-MEMBER-005 與 TC-ERR-USER-006 的成員保護路徑。另直接驗證 SQL Server 複合鍵、Owner 移交、未完成 Task 阻擋、角色集合取代與候選人競態停用。
+- **Backend Task Ready 新增測試**：2026-09-13 22:16:23（Asia/Taipei，UTC+08:00），執行 `dotnet test tests/ProjectManagementWeb.IntegrationTests/ProjectManagementWeb.IntegrationTests.csproj --no-build --filter "FullyQualifiedName~TaskApiTests"`；連續兩次 Passed 7、Failed 0、Skipped 0，合併涵蓋 TC-F-TASK-001、002、008、010、011、019、021、TC-E-TASK-004、TC-ERR-TASK-005、012、014、TC-ST-TASK-013。16 組狀態 API 轉換、三種 stale rowVersion、Viewer 唯讀與軟刪除關聯均以真實 SQL Server 驗證。
+- **Backend Task Planned 缺口修正與重測**：2026-09-13 22:20:48（Asia/Taipei，UTC+08:00），先以新增測試重現 Description 8001 字被建立及 11 筆批次被更新的缺陷，再修正 `TaskService`；完整 `TaskApiTests` 連續兩次 Passed 9、Failed 0、Skipped 0。TC-ERR-TASK-009、022 與 TC-F/ERR-TASK-015～017 已通過欄位邊界、10 筆上限、403 優先序及 rollback 驗證。
+- **Frontend Task 批次上限**：2026-09-13 22:23:51（Asia/Taipei，UTC+08:00），`taskListView.spec.ts` 連續兩次 Tests 4 passed、Failed 0；`npm run type-check` 與 `npm run lint` 亦通過。UI 現在保留跨頁 Task 快照與 rowVersion，超過 10 筆時保留選取、停用送出並提示上限，回到 10 筆才可送出。
+- **Backend Comment API／SQL**：2026-09-13 22:31:40（Asia/Taipei，UTC+08:00），`CommentApiTests` 連續兩次 Passed 6、Failed 0、Skipped 0，合併涵蓋 TC-F-CMT-001～002、TC-ST-CMT-004、007、TC-ERR-CMT-003、005～009。首次測試發現已授權 Project 內不存在 Task 錯回 403，修正 `CommentService` 的 Project scope 與 Task existence 判斷順序後通過；另以一次性 EF interceptor 驗證儲存失敗的 500、交易完整性及明確重送只寫入一次。
+- **Frontend Comment 失敗復原**：2026-09-13 22:33:06（Asia/Taipei，UTC+08:00），`taskDetailView.spec.ts` 連續兩次 Tests 1 passed、Failed 0；`npm run type-check` 與 `npm run lint` 亦通過。新增／編輯在 timeout 或 5xx 時保留含換行草稿、未顯示成功、未重新載入或自動重送，使用者再次送出成功後才清空並重新載入。
+- **Backend API 平台邊界**：2026-09-15 14:47:50（Asia/Taipei，UTC+08:00），`ApiSurfaceTests` 連續兩次 Passed 9、Failed 0、Skipped 0；TC-F-API-004 的 health、CORS credentials／origin 及四組 OpenAPI 環境設定均通過。Production-like host 首輪因測試未提供正式環境必填 RSA 私鑰而回 500；改由測試注入不落盤的一次性 RSA 金鑰後通過，未變更產品安全規則。
+- **Backend SQL query filter／rowversion**：2026-09-15 14:50:23（Asia/Taipei，UTC+08:00），恢復本機 Docker SQL Server 後，完整 `SqlServerConstraintTests` 連續兩次 Passed 7、Failed 0、Skipped 0；新增 TC-SQL-003、005 已驗證三種軟刪除實體與三種 rowversion。Project／Task／Comment API 再於 2026-09-15 14:51:39 連續兩次 Passed 25、Failed 0、Skipped 0，補驗 stale、空白與非法 Base64 一律 409 且資料不變。
+- **Backend JWT 契約**：2026-09-15 14:55:32（Asia/Taipei，UTC+08:00），完整 `AuthApiTests` 連續兩次 Passed 16、Failed 0、Skipped 0；新增 TC-SEC-API-003 驗證 claims、15 分鐘期限、issuer、audience、signature、expired token 與 TokenVersion 即時失效。完整回歸首輪曾因測試 factory 共用 RSA provider 在前一測試關閉後被釋放而失敗，改為每個 factory 獨立一次性金鑰後重測通過，未變更產品金鑰生命週期。
+- **Backend Problem Details 與完整回歸**：2026-09-15 15:05:25（Asia/Taipei，UTC+08:00），先以 `CommentApiTests` 重現 500 缺少 `code`，修正為 `internal_server_error`；再發現 Refresh 缺少 Cookie 的 401 未帶 `traceId`，一併對齊 RFC 7807 共通契約。完整 Integration 最終 Passed 68、Failed 0、Skipped 0。首次完整回歸另重現最後 Admin 並行降級的 SQL deadlock 偶發回 500，修正為交易 rollback 後固定 409 `last_admin`，針對案例連續三次通過後完整回歸通過。
+- **本批次建置、Unit 與 Frontend 回歸**：2026-09-15 15:06:33（Asia/Taipei，UTC+08:00），Backend `dotnet format --verify-no-changes` 通過、build 0 warnings／0 errors、Unit Passed 58／Failed 0／Skipped 0；Frontend Vitest Test Files 12 passed、Tests 26 passed、Failed 0，type-check 與 lint 通過。Playwright E2E 本批尚未執行，不計為通過。
+- **Frontend Task／Comment 詳情與刪除流程**：2026-09-15 15:15:45（Asia/Taipei，UTC+08:00），`taskListView.spec.ts` 與 `taskDetailView.spec.ts` 最終連續兩次 Test Files 2 passed、Tests 11 passed、Failed 0；完整 Vitest Test Files 12 passed、Tests 34 passed、Failed 0，type-check 與 lint 通過。首次執行以 5 個失敗重現 rowVersion 外洩、留言驗證與軟刪除提示缺口，修正產品後通過；Playwright E2E 仍未執行，不計為通過。
+- **Backend OpenAPI enum 與完整整合回歸**：2026-09-15 15:20:55（Asia/Taipei，UTC+08:00），TC-F-API-001 目標測試連續兩次 Passed 1、Failed 0、Skipped 0；首次執行重現 `/openapi/v1.json` 將 ProjectStatus／TaskStatus 錯誤描述為 integer 且沒有 enum，補上 HTTP JSON 字串 enum 設定後，完整 Integration Passed 68、Failed 0、Skipped 0，`dotnet format --verify-no-changes` 通過。
+- **隔離 Playwright E2E 與前端回歸**：2026-09-15 15:30:35（Asia/Taipei，UTC+08:00），以新 `test:e2e:isolated` 流程為每次執行建立獨立 Compose project、SQL volume、兩個臨時已驗證 Admin 與記憶體密碼，測後精確清除。首次正式執行為 Passed 7、Failed 0、Skipped 3；移除不必要的 viewport skip 後重現手機 Project 詳情層疊缺陷（Passed 9、Failed 1、Skipped 0），修正 grid 子項最小寬度後，失敗案例 Passed 1，完整 desktop／mobile 10 組最終連續兩次 Passed 10、Failed 0、Skipped 0。完整 Vitest Test Files 12 passed、Tests 32 passed、Failed 0，type-check 與 lint 通過。
+- **Frontend route／錯誤映射／XSS**：2026-09-15 15:34:32（Asia/Taipei，UTC+08:00），`router.spec.ts`、`mockServices.spec.ts`、`taskDetailView.spec.ts` 最終連續兩次 Test Files 3 passed、Tests 14 passed、Failed 0；完整 Vitest Test Files 12 passed、Tests 35 passed、Failed 0。首次執行以 timeout 訊息失敗重現 caller cancellation 語意混淆，分離錯誤後通過；type-check 與 lint 最終通過。
+- **重寄安全文案、失敗 Log 與完整回歸**：2026-09-15 15:59:08（Asia/Taipei，UTC+08:00），依確認後規格將中英文 UI 改為只表示「已受理重寄請求」，避免 SMTP 失敗時誤報已寄出；Backend 保留 EmailMessages Failed／LastError，另寫入只含 EmailMessageId、AccountId、FailureType 的 Warning Log，測試明確排除收件 Email 與 Token。目標 Integration Passed 1、Failed 0、Skipped 0；完整 Integration Passed 68、Failed 0、Skipped 0；Vitest Test Files 13 passed、Tests 36 passed、Failed 0，type-check 與 lint 通過；隔離 Playwright desktop／mobile 14 組最終連續兩輪 Passed 14、Failed 0、Skipped 0，且每輪停用 SMTP、產生臨時密碼並刪除容器與 volume。
+- **Frontend Project／User／Preference／Task 表單與錯誤狀態回歸**：2026-09-15 16:20:04（Asia/Taipei，UTC+08:00），補齊清單載入錯誤、查詢交集、Viewer 偏好唯讀、使用者管理表單、Project Owner 候選、Project／Task 建立固定 Pending、表單載入／送出／衝突、防重複送出、成員多角色集合、Owner 移除保護與候選競態錯誤。執行 Vitest Test Files 17 passed、Tests 65 passed、Failed 0、Skipped 0；`vue-tsc --build` 與 ESLint 均通過。
+- **Project Owner 完整資格回歸**：2026-09-15 16:26:33（Asia/Taipei，UTC+08:00），Backend 建立與修改在 Serializable 交易內驗證帳號存在、啟用、Email 已驗證且 system role 恰為 Administrator；修改另要求既有 Project member。目標 Integration Passed 2、Failed 0、Skipped 0；完整 solution Unit Passed 58、Integration Passed 70、Failed 0、Skipped 0；`dotnet format --verify-no-changes` 通過。
+- **Project 欄位邊界回歸**：2026-09-15 16:30:21（Asia/Taipei，UTC+08:00），建立與修改共用 Name／Description 應用層驗證，超界在寫入 DB 前回 `400 validation_error` 與欄位錯誤。目標 Integration Passed 1、Failed 0、Skipped 0；完整 solution Unit Passed 58、Integration Passed 71、Failed 0、Skipped 0；`dotnet format --verify-no-changes` 通過。
+- **Project 狀態與註冊欄位邊界回歸**：2026-09-15 22:14:40（Asia/Taipei，UTC+08:00），新增 Project 16 組 API 狀態互轉、版本、rowVersion、audit，以及註冊帳號／名稱／密碼 Unit／API／SQL／UI 邊界。Frontend Vitest Test Files 17 passed、Tests 66 passed、Failed 0、Skipped 0，type-check 與 lint 通過；Backend Unit Passed 58、Integration Passed 73、Failed 0、Skipped 0，format 通過。
+- **登入與 Email 驗證 UI 回歸**：2026-09-15 22:22:17（Asia/Taipei，UTC+08:00），補齊無效登入一般化錯誤、登入防重複送出與 redirect、Email 驗證成功維持 Viewer 文案，以及驗證畫面的 status／alert 語意。Frontend Vitest Test Files 18 passed、Tests 69 passed、Failed 0、Skipped 0；type-check 與 lint 通過。無效／過期 Token 的真實錯誤畫面仍隨 TC-ERR-AUTH-010 的 Token 功能於隔離 E2E 驗證。
+- **Email 驗證 Token、重寄限制與隔離 E2E 回歸**：2026-09-15 22:44:47（Asia/Taipei，UTC+08:00），以 SHA-256 hash 與 SQL 狀態完成 3 分鐘、最新版、一次性、帳號綁定 Token；以帳號與雜湊來源 IP 完成 60 秒冷卻及滾動 60 分鐘 5 次限制。SMTP 失敗只保留 Failed 紀錄與安全 Warning Log，且不廢止舊 Token。Backend `dotnet format --verify-no-changes` 通過、build 0 warnings／0 errors、Unit Passed 60／Failed 0／Skipped 0、Integration Passed 78／Failed 0／Skipped 0；Frontend Vitest 69／69、type-check、lint、Prettier、production build 全部通過；隔離 Playwright desktop／mobile Passed 16／Failed 0／Skipped 0。E2E 首輪以 14 pass／2 fail 重現舊 seed 將 Owner 建成 Admin 的規格落差，改為專用已驗證 Administrator 後，目標 2／2 與完整 16／16 通過。
+- **Project Owner 與 Project／Task 狀態轉換續測**：2026-09-16 10:05:02（Asia/Taipei，UTC+08:00），以既有實際 SQL Server 重測 `ProjectApiTests` Passed 14／Failed 0／Skipped 0，將已有完整證據的 TC-ERR-PRJ-004 改為 Ready；`DomainEntityTests` Passed 37／Failed 0／Skipped 0、`TaskApiTests` Passed 9／Failed 0／Skipped 0。TC-ST-TASK-013 的合併測試已擴充為完整修改、被指派者修改與批次修改三條 API 各自跑完 16 組狀態互轉，GAP-004／005 文件與證據同步完成；變更的 Task Flowchart 1 張及彙整 C4 5 張圖均通過 Mermaid Skill 靜態 lint（非 renderer 證明）。
+- **Frontend Task 清單與批次失敗復原續測**：2026-09-16 10:15:06（Asia/Taipei，UTC+08:00），`taskListView.spec.ts` 由 6 增為 8 個合併案例，先以紅燈重現切頁後仍保留上一頁選取的缺陷；產品修正為切頁或變更查詢條件時清空選取，批次 API 失敗則保留目前清單與選取。目標測試 Passed 8／Failed 0／Skipped 0；完整 Vitest Test Files 18 passed、Tests 71 passed、Failed 0、Skipped 0，type-check、ESLint、Prettier 與 production build 全部通過。TC-F-TASK-001、002、006、010、011、015、TC-E-TASK-007、TC-ERR-TASK-005、012、014、016 的覆蓋說明已由部分更新為完整。
+- **Frontend Project Member 續測**：2026-09-16 10:17:42（Asia/Taipei，UTC+08:00），補上 Project Detail 的候選人 account／name 搜尋 UI，搜尋值 trim 後傳入既有分頁 API，並重設舊候選選擇；`projectDetailView.spec.ts` Passed 9／Failed 0／Skipped 0。完整 Vitest Test Files 18 passed、Tests 72 passed、Failed 0、Skipped 0，type-check、ESLint、Prettier 與 production build 全部通過。TC-F-MEMBER-001、002、008、TC-ST-MEMBER-005、TC-ERR-MEMBER-006、007 已依實際 API／SQL／UI 證據由部分更新為完整。
+- **隔離 Refresh／Preference E2E 續測**：2026-09-16 10:20:46（Asia/Taipei，UTC+08:00），隔離腳本使用全新 SQL volume、即時密碼、空白 SMTP credentials 並固定單 worker，desktop／mobile 共 20 個 Playwright 測試 Passed 20／Failed 0／Skipped 0，結束後容器與 volume 已清除。新增未知 Refresh Cookie 必須清除登入狀態並回登入頁，以及批次確認偏好保存、reload 持久化與復原原值；TC-F-AUTH-001、TC-ERR-AUTH-021、TC-F-USER-009、TC-ERR-USER-010、TC-F-PREF-001 已由部分更新為完整。
+- **登入失敗共享限流與可信 Proxy 續測**：2026-09-16 10:34:37（Asia/Taipei，UTC+08:00），先以紅燈確認缺少 `LoginFailureAttempts`，再新增 SHA-256 帳號／IP 雜湊、SQL Server 共用 15 分鐘視窗與安全 Warning Log。合併測試通過同帳號／不同 IP、不同帳號／同 IP、兩個應用執行個體、第 1–4 次 401、第 5 次與限制中正確密碼 429、滿 15 分鐘恢復、不鎖帳號及 Log 不含帳號／密碼；另驗證未設定 allowlist 時偽造 forwarded header 無效、`ForwardLimit=1`、可信 proxy／network 及無效設定 fail-fast。首次完整回歸因舊測試把同帳號的停用登入當成第 5 次失敗而正確收到 429，將停用情境隔離為另一帳號後，完整 `AuthApiTests` Passed 24／Failed 0／Skipped 0。GAP-003 與 TC-SEC-AUTH-019 已同步完成。
+- **Email／Refresh 資料完整性、Project 時區／軟刪除與完整回歸**：2026-09-16 15:20:57（Asia/Taipei，UTC+08:00），新增 `EnforceEmailAndRefreshTokenIntegrity`、`AddProjectTimeZone`、`AddProjectSoftDeleteActor` migrations。合併測試覆蓋 NormalizedEmail NOT NULL／UNIQUE／髒資料 fail-fast／並行註冊 409、Refresh Token self-FK NoAction、Project IANA TimeZoneId 遷移與 API／UI、Administrator／Admin 軟刪除、User／Viewer 403、404、409、DeletedByAccountId、audit 與子資料保留。Backend Unit Passed 61／Failed 0／Skipped 0，Integration Passed 87／Failed 0／Skipped 0；Frontend Vitest Test Files 18 passed／Tests 75 passed，type-check 與 production build 通過；隔離 Playwright 以新 SQL volume、隨機密碼與空白 SMTP 執行 desktop／mobile Passed 20／Failed 0／Skipped 0，結束後容器與 volume 已清除。
+- **Project scope 403／404 全端點矩陣**：2026-09-16 15:39:03（Asia/Taipei，UTC+08:00），`ProjectApiTests` 與 `TaskApiTests` 新增 TC-SEC-API-005 合併矩陣，覆蓋 Project／Member／Task／Comment 的 list、detail、create、update、delete、Task 批次及被指派者更新授權順序；目標測試 Passed 2／Failed 0／Skipped 0。首次編譯因測試引用不存在的帳號名稱輔助方法失敗，改用既有 `GetAccountAsync` 後重跑通過；另確認 Administrator 沒有被指派者專用更新權限，因此該 endpoint 的已授權 404 路徑改由實際被指派者驗證，未放寬產品權限。
+- **SQL FK 刪除行為與 JWT 稽核來源**：2026-09-16 15:47:48（Asia/Taipei，UTC+08:00），新增 TC-SQL-004 真實 SQL Server 合併測試，並將 TC-SQL-006 actor／快照 assertions 合併進既有 Project、Member、Task、Comment、User 異動案例。首次稽核目標測試因 JSON 內中文採 `\uXXXX` escaping 導致 3 個字串 assertion 失敗，改為解析 JSON 欄位後 Passed 9／Failed 0／Skipped 0；完整 Backend 回歸 Unit Passed 61、Integration Passed 90、Failed 0、Skipped 0。
+- **Task 到期提醒、UI 完整矩陣與最終回歸**：2026-09-16 20:47:27（Asia/Taipei，UTC+08:00），完成 Hangfire Scanner／Sender、Project 當地 08:00 與同日補跑、DST 日期冪等、七日視窗、SQL 唯一建立與原子 claim、寄送前重查、5／15／60 分鐘重試、provider idempotency key、DB Failed／AlertedAt 與不含敏感資料的 Warning Log。首次隔離啟動發現低權限 API 帳號不能建立 Hangfire schema，已將 schema 初始化移到 migrator 權限邊界並關閉 runtime 自動建置；首次 UI E2E 亦發現關閉的手機 drawer 仍可進入 Tab 順序，已修正後重測。最終 Backend format、build 0 warnings／0 errors、Unit Passed 61／Failed 0／Skipped 0、Integration Passed 98／Failed 0／Skipped 0；Frontend Vitest Passed 75、type-check、lint、Prettier、production build 全部通過；全新 SQL volume 與即時密碼的隔離 Playwright desktop／mobile Passed 22／Failed 0／Skipped 0，結束後容器與 volume 已清除。118 個案例全部 Ready 且無部分覆蓋。
+- **Backend 本批次最終回歸**：2026-09-13 12:59:30（Asia/Taipei，UTC+08:00）；`dotnet format --verify-no-changes` 通過，`dotnet build --no-incremental` 為 0 warnings／0 errors，Unit Passed 58、Failed 0、Skipped 0，Integration Passed 24、Failed 0、Skipped 0。
+- **Frontend Vitest 最終驗證**：`npm test -- --reporter=verbose`；Test Files 11 passed，Tests 24 passed，Failed 0、Skipped 0。
+- **Frontend Playwright 基線**：`npm run test:e2e -- --reporter=list`；Passed 0、Failed 0、Skipped 10。當時尚未建立隔離 E2E 帳號及注入其本機執行密碼 `PMW_E2E_PASSWORD`，不得計為通過；進入 E2E 階段時依本文件規則由測試實作完成設定後重測。
+- **本輪完成狀態**：118 案全部為 Ready，且各案例皆有合併後的自動化證據；無 Planned、無部分覆蓋、無 skip/todo 冒充通過。Backend Unit Passed 61、Integration Passed 98；Frontend Vitest Passed 75、隔離 Playwright desktop／mobile Passed 22。

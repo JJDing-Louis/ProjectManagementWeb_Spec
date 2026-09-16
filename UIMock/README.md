@@ -31,6 +31,8 @@
 
 - Project 名稱為必填，trim 後長度為 1–200 個字元。
 - Description 為選填，trim 後最多 4000 個字元。
+- Owner 為必填；候選清單只顯示已啟用、Email 已驗證且系統角色恰為 `Administrator` 的帳號。修改時，新 Owner 還必須已是該 Project 成員。
+- IANA `TimeZoneId` 為必填；新 Project 必須由使用者明確指定合法值，不得以系統預設代填。
 
 ### Task Item 表單與 TaskItemDetail.png
 

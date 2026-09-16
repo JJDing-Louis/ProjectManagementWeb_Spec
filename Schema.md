@@ -45,6 +45,10 @@ erDiagram
     TaskItems ||--o{ TaskItemHistories : records
     Accounts ||--o{ TaskItemComments : writes
     Accounts ||--o{ TaskItemHistories : acts
+    Projects ||--o{ ProjectReminderRuns : scans
+    Projects ||--o{ TaskReminders : owns
+    TaskItems ||--o{ TaskReminders : triggers
+    Accounts ||--o{ TaskReminders : receives
 ```
 
 ## Identity 與授權
@@ -53,7 +57,7 @@ erDiagram
 
 - `Id uniqueidentifier` PK。
 - `UserName nvarchar(256)`；`NormalizedUserName` 使用 filtered UNIQUE index。
-- `Email nvarchar(256)`；`NormalizedEmail` 目前只有一般 index，應用層要求 Email 唯一。
+- `Email nvarchar(256)`；`NormalizedEmail nvarchar(256)` NOT NULL，使用無 filter UNIQUE index 保證 Email 唯一。
 - `PasswordHash nvarchar(max)` 由 ASP.NET Core Identity 維護。
 - `Name nvarchar(100)`、`Remark nvarchar(500)`、`EmailConfirmed bit`、`IsEnabled bit`、`TokenVersion int`。
 - Identity 其他欄位包含 SecurityStamp、ConcurrencyStamp、Lockout 與 AccessFailedCount。
@@ -68,7 +72,7 @@ erDiagram
 ### RefreshTokens 與 UserPreferences
 
 - `RefreshTokens` 保存 `TokenHash nvarchar(64)` UNIQUE、Account、Family、到期、建立、撤銷與取代 token ID。不保存 refresh token 原文。
-- `ReplacedByTokenId` 目前是應用層邏輯參照，尚未建立 Database Foreign Key。
+- `ReplacedByTokenId` 是 nullable self-referencing FK，Delete NoAction；正常生命週期只撤銷，不實體刪除 Token。
 - `UserPreferences.AccountId` 同時是 PK 與 Accounts FK，保存 `SkipBatchConfirmation bit`。
 
 ## 專案與成員
@@ -82,10 +86,16 @@ erDiagram
 | `Name` | `nvarchar(200)` NOT NULL，trim 後 1–200 字 |
 | `Description` | `nvarchar(4000)` NULL，選填 |
 | `OwnerAccountId` | FK → `Accounts.Id`，Delete Restrict |
+| `TimeZoneId` | `nvarchar(100)` NOT NULL，合法 IANA timezone ID |
 | `Status` | `Pending | Active | Completed | Archived` |
 | `VersionNumber` | `int` NOT NULL，預設 1 |
+| 軟刪除 | `DeletedAt`、`DeletedByAccountId` nullable FK → `Accounts.Id`，Delete NoAction |
 | 時間 | `CreatedAt`、`UpdatedAt`、`DeletedAt` |
 | `RowVersion` | SQL Server `rowversion` concurrency token |
+
+- `TimeZoneId` 已由 `AddProjectTimeZone` migration 新增。新 Project 必須明確提供；既有資料由部署必填的 `PMW_MIGRATION_DEFAULT_TIME_ZONE_ID` 回填，設定缺少或無效時 migration fail-fast。
+- `DeletedByAccountId` 已由 `AddProjectSoftDeleteActor` migration 新增；Project 軟刪除不 cascade 實體刪除成員、Task、Comment 或 history。
+- `OwnerAccountId` 的 FK 只能保證帳號存在；Owner 必須已啟用、Email 已驗證且系統角色恰為 `Administrator` 的規則，由 Application use case 在建立與修改時驗證。修改時，新 Owner 另須已是該 Project 成員。
 
 ### ProjectMembers、ProjectRoles、ProjectMemberRoles
 
@@ -133,13 +143,36 @@ erDiagram
 ### EmailMessages
 
 - 使用 GUID PK，保存 Recipient、Subject、Body、Status、AttemptCount、LastError、CreatedAt 與 SentAt。
-- 目前主要支援 Email 驗證信，Recipient 沒有 Accounts FK。
-- Task 到期提醒尚未實作，現行 Schema 也尚未有可保證 `(TaskItemId, RecipientAccountId, ReminderDate)` 唯一的提醒紀錄。實作時必須透過新 migration 新增，不得把本文的 Planned 說明視為已建立的資料表。
+- 目前支援 Email 驗證信，Recipient 沒有 Accounts FK；Task 到期提醒使用獨立 `TaskReminders` 狀態表與 SMTP gateway。
 
-## 已知的 Schema 缺口
+### ProjectReminderRuns 與 TaskReminders
 
-- `Accounts.NormalizedEmail` 尚無 Database UNIQUE constraint，與 runtime unique Email 規則尚未完全對齊。
-- `RefreshTokens.ReplacedByTokenId` 尚無 self-referencing Foreign Key。
-- Task 到期提醒的紀錄、唯一性、claim／retry 狀態尚未落地。
+- `ProjectReminderRuns` 使用 GUID PK，保存 ProjectId、`ReminderDate date`、StartedAt、CompletedAt 與 Created／Duplicate／Skipped 摘要計數；`(ProjectId, ReminderDate)` UNIQUE，保證同一 Project／當地日期只取得一次掃描資格。
+- `TaskReminders` 使用 GUID PK，分別以 NoAction FK 指向 Project、Task 與 Recipient Account；`(TaskItemId, RecipientAccountId, ReminderDate)` UNIQUE，避免同日同收件人重複提醒。
+- 狀態為 `Pending | Processing | Retry | Sent | Failed | Cancelled`；保存 AttemptCount、RetryCount、NextAttemptAt、ClaimedAt、ClaimToken、SentAt、ProviderResponseId、LastError、CancellationReason 與 AlertedAt。
+- `(Status, NextAttemptAt)` index 支援到期工作 claim。Worker 以 SQL `UPDLOCK`、`READPAST`、`ROWLOCK` 原子取得寄送權，claim lease 為 5 分鐘；最終失敗以 Failed／AlertedAt 與安全結構化 Warning Log 追蹤，不提供管理 UI。
+- `AddTaskReminders` migration 建立上述資料表；Hangfire schema 由 migrator 權限帳號初始化，API runtime 不需要 DDL 權限。
 
-上述項目是已知缺口，不得在測試或文件中當作已實作。
+### EmailVerificationTokens
+
+- 使用 GUID PK，保存 `AccountId`、`EmailMessageId`、SHA-256 `TokenHash`、CreatedAt、ExpiresAt、ActivatedAt、UsedAt 與 InvalidatedAt；不另存 Token 原文。
+- `TokenHash` 使用 UNIQUE index；`EmailMessageId` 為一對一 UNIQUE FK。
+- filtered UNIQUE index 保證同一帳號同時最多只有一個已啟用且尚未使用／失效的 Token。
+- Token 自簽發起 3 分鐘到期；只有 SMTP 成功後才啟用並使舊 Token 失效。SMTP 失敗時新 Token 標示失效，舊 Token 保持原狀。
+
+### EmailVerificationResendAttempts
+
+- 使用 GUID PK，保存 nullable `AccountId`、SHA-256 `ClientAddressHash`、RequestedAt 與 Outcome；不保存來源 IP 原文。
+- `(ClientAddressHash, RequestedAt)` 與 `(AccountId, Outcome, RequestedAt)` index 支援 IP／帳號滾動視窗與 60 秒冷卻查詢。
+- 不存在帳號仍建立沒有 AccountId 的嘗試紀錄，以便套用 IP 上限；只有 Outcome=`Allowed` 的請求會建立新 Token 與 EmailMessage。
+
+### LoginFailureAttempts
+
+- 使用 GUID PK，保存 SHA-256 `AccountKeyHash`、SHA-256 `ClientAddressHash`、OccurredAt 與 Outcome；不保存帳號或來源 IP 原文，也不建立 Accounts FK。
+- `(AccountKeyHash, Outcome, OccurredAt)` 與 `(ClientAddressHash, Outcome, OccurredAt)` index 支援帳號／IP 的滾動 15 分鐘視窗查詢，供所有應用執行個體共用。
+- Outcome 為 `InvalidCredentials` 或 `RateLimited`；只有 `InvalidCredentials` 計入限制門檻，避免受限請求無限延長視窗。紀錄不自動刪除，後續若需 retention 由獨立維運流程處理。
+
+## 本輪資料完整性狀態
+
+- `Accounts.NormalizedEmail` 的 NOT NULL／UNIQUE、`RefreshTokens.ReplacedByTokenId` self-FK，以及 Task 到期提醒的唯一性、claim、retry、取消與告警狀態均已由 migration 落地。
+- 真實 SQL Server 回歸已驗證髒資料 fail-fast、FK delete behavior、唯一限制與多 worker concurrency；後續 Schema 異動仍須同步 EF mapping、migration、model snapshot 與本文件。
