@@ -1,11 +1,11 @@
 C4Component
-    title Project Management Web - Frontend SPA Component Diagram（設計草稿）
+    title Project Management Web - Frontend SPA Component Diagram（現行實作）
 
     Container(api, "後端 API", "ASP.NET Core Web API", "驗證權限並執行業務流程")
 
     Container_Boundary(webBoundary, "前端網站（Vue 3 SPA）") {
         Component(router, "Router 與 Route Guards", "Vue Router", "依登入狀態與角色載入頁面；僅負責導覽，不取代後端授權")
-        Component(authViews, "帳號與驗證畫面", "Vue Views", "SignIn、SignUp、EmailVerification 與 ResendVerification")
+        Component(authViews, "帳號與驗證畫面", "Vue Views", "SignInView、SignUpView、VerifyEmailView 與 ResendVerificationView")
         Component(userViews, "使用者與偏好畫面", "Vue Views", "UserList、UserDetail 與 Settings")
         Component(projectViews, "專案管理畫面", "Vue Views", "ProjectList、ProjectDetail 與 ProjectForm")
         Component(taskViews, "Task 與留言畫面", "Vue Views", "TaskList、TaskDetail 與 TaskForm；批次確認現由 TaskList 處理")

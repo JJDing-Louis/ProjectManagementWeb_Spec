@@ -1,19 +1,19 @@
 C4Component
-    title Project Management Web - Backend API Component Diagram（設計草稿）
+    title Project Management Web - Backend API Component Diagram（現行實作）
 
     Container_Boundary(apiBoundary, "後端 API（ASP.NET Core Web API）") {
 
         Boundary(controllerLayer, "Controller Layer", "Presentation") {
-            Component(authController, "Account Controller", "ASP.NET Core Controller", "處理註冊、登入、登出、Token 更新、Email 驗證與重新寄送")
-            Component(userControllers, "User Controllers", "ASP.NET Core Controller", "UsersController、UserPreferencesController")
-            Component(projectControllers, "Project Controllers", "ASP.NET Core Controller", "ProjectsController、ProjectMembersController")
+            Component(authController, "Auth / Security Controllers", "ASP.NET Core Controller", "AuthController、SecurityController")
+            Component(userControllers, "User / Role Controllers", "ASP.NET Core Controller", "UsersController、RolesController；偏好由 UsersController 提供")
+            Component(projectControllers, "Project Controller", "ASP.NET Core Controller", "ProjectsController；同時提供 Project Members API")
             Component(taskControllers, "Task Controllers", "ASP.NET Core Controller", "TaskItemsController、CommentsController")
         }
 
         Boundary(applicationLayer, "Application / Service Layer", "Application") {
             Component(identityService, "Identity 與 User Service", "C#", "執行帳號、Session、角色、登入雙維度限流、3 分鐘一次性 Email Token、重寄限流與偏好規則")
             Component(projectService, "Project Service", "C#", "執行專案、Owner、成員、角色與版本衝突規則")
-            Component(taskService, "Task 與 Comment Service", "C#", "執行狀態轉換、指派、批次交易、軟刪除與留言規則")
+            Component(taskService, "Task 與 Comment Service", "C#", "執行任意狀態更新、指派、批次交易、軟刪除與留言規則")
             Component(reminderScanner, "Task Reminder Scanner", "Hangfire Recurring Job", "依 Project 當地日期於 08:00 後掃描七日視窗，建立不重複的提醒工作")
             Component(reminderSender, "Task Reminder Sender", "Hangfire Recurring Job", "原子 claim、寄送前重查、單封寄送、重試、寄送結果與安全告警記錄")
         }

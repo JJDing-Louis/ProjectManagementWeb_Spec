@@ -1,17 +1,17 @@
 C4Component
-    title Project Management Web - Frontend Component to Controller Mapping（設計草稿）
+    title Project Management Web - Frontend Component to Controller Mapping（現行實作）
 
     Container_Boundary(webBoundary, "前端網站（Vue 3 SPA）") {
-        Component(authViews, "帳號與驗證畫面", "Vue Views", "SignIn、SignUp、EmailVerification、ResendVerification")
+        Component(authViews, "帳號與驗證畫面", "Vue Views", "SignInView、SignUpView、VerifyEmailView、ResendVerificationView")
         Component(userViews, "使用者與偏好畫面", "Vue Views", "UserList、UserDetail、Settings")
         Component(projectViews, "專案管理畫面", "Vue Views", "ProjectList、ProjectDetail、ProjectForm")
         Component(taskViews, "Task 與留言畫面", "Vue Views", "TaskList、TaskDetail、TaskForm")
     }
 
     Container_Boundary(apiBoundary, "後端 API（ASP.NET Core Web API）") {
-        Component(authController, "AuthController", "Controller", "帳號、Session、Token 與 Email 驗證")
-        Component(userControllers, "UsersController / UserPreferencesController", "Controllers", "使用者、系統角色與個人偏好")
-        Component(projectControllers, "ProjectsController / ProjectMembersController", "Controllers", "專案、Owner、成員與專案角色")
+        Component(authController, "AuthController / SecurityController", "Controllers", "帳號、Session、Token、Email 驗證與 CSRF token")
+        Component(userControllers, "UsersController / RolesController", "Controllers", "使用者、系統角色與個人偏好")
+        Component(projectControllers, "ProjectsController", "Controller", "專案、Owner、成員與專案角色")
         Component(taskControllers, "TaskItemsController / CommentsController", "Controllers", "Task、批次狀態、軟刪除與留言")
     }
 

@@ -2,11 +2,27 @@
 
 ## 1. 文件資訊
 
-- **產出日期**：2026-09-07；**最後更新**：2026-09-16
+- **產出日期**：2026-09-07；**最後更新**：2026-09-17
 - **需求來源**：`UserStory.md`、`Flowchart/`、`Schema.md`、`StaticData.md`、`UIMock/`、Backend API／EF Core migrations／現有測試、Frontend routes／views／services／現有測試
 - **測試範圍**：帳號與驗證、授權與 Session、使用者管理、偏好、專案與成員、Task 清單與異動、留言、到期提醒、SQL 完整性、UI／E2E
-- **狀態定義**：`Ready` 表示已有可測介面；`Planned` 表示需求已定義但功能尚未實作，或因契約缺口尚不能執行。
-- **自動化覆蓋說明**：僅依目前 repository 中實際存在的測試檔判定；「部分」不代表本次已執行通過。
+- **案例狀態定義**：`Ready` 只表示案例已有可測介面與明確預期；`Planned` 表示需求已定義但功能尚未實作，或因契約缺口尚不能執行。`Ready` 本身不等於測試已通過。
+- **實測標記定義**：`✅ 已實測通過` 表示已有實際執行時間、結果與測試程式證據；`🟡 部分實測` 表示只執行部分層級或路徑；`⚪ 尚未實測` 表示只有案例或測試程式，尚無成功執行證據。
+- **目前驗證結論**：118 個案例全部為 `✅ 已實測通過`；0 個部分實測、0 個尚未實測。最終全量證據請直接查看「§1.1 快速判讀」與「§8.1 當前有效的最終全量回歸」。
+
+### 1.1 快速判讀：哪些案例已真正執行
+
+| 判讀項目 | 目前結果 | 證據位置 |
+|---|---:|---|
+| 測試案例總數 | 118 | §4 各 `TC-*` 案例 |
+| ✅ 已實測通過 | 118 | §5 實測覆蓋矩陣、§8.1 最終全量回歸 |
+| 🟡 部分實測 | 0 | 無 |
+| ⚪ 尚未實測 | 0 | 無 |
+| Backend 最後完整回歸 | 2026-09-16 20:47:27 +08:00 | Unit 61／61、Integration 98／98；Failed 0、Skipped 0 |
+| Frontend 最後完整回歸 | 2026-09-16 20:47:27 +08:00 批次 | Vitest 75／75，type-check、ESLint、Prettier、production build 全部通過 |
+| E2E 最後完整回歸 | 2026-09-16 20:44:21 +08:00 | Playwright desktop／mobile 22／22；Failed 0、Skipped 0 |
+| 獨立測試日誌 | 2026-09-16 | `TestLogs/2026-09-16-第一次TDD測試日誌.md` |
+
+閱讀個別案例時，先看 `狀態` 判斷案例是否可執行，再看「現有自動化覆蓋」確認對應測試程式；是否真的執行通過，則以 §5 的 `實測狀態` 及 §8 的時間戳紀錄為準。歷史紀錄中出現的失敗或 Skip 是修正前過程，不能覆蓋 §8.1 的最終結果。
 
 ## 2. 規格衝突決議與缺口
 
@@ -1120,7 +1136,7 @@
 - **測試步驟**：對 Project/User/Task list 與 detail/form 逐一模擬四種狀態。
 - **預期結果**：狀態互斥且訊息清楚；錯誤不顯示空狀態；提交中避免重送；成功顯示 toast／正確導頁。
 - **資料後置狀態**：依成功與否一致。
-- **現有自動化覆蓋**：極少；`components.spec.ts` 只測 StatusBadge。
+- **現有自動化覆蓋**：完整：`projectListView.spec.ts`、`bootstrapAdminProtection.spec.ts`、`settingsView.spec.ts`、`projectFormView.spec.ts`、`taskListView.spec.ts`、`taskDetailView.spec.ts` 與 `taskFormView.spec.ts` 已合併驗證清單／詳情／表單的 loading、empty、success、error、衝突保留輸入、提交期間防重複送出及成功後 toast／導頁；最後完整 Vitest 於 2026-09-16 20:47:27（Asia/Taipei，UTC+08:00）批次 Passed 75、Failed 0、Skipped 0。
 
 #### TC-ERR-UI-003 400/401/403/404/409/422/5xx 與 timeout mapping
 - **類型與優先級**：Error／P0；**測試層級**：UI、E2E；**狀態**：Ready
@@ -1176,46 +1192,38 @@
 - **資料後置狀態**：不變。
 - **現有自動化覆蓋**：完整：`app.spec.ts` 合併核對 SignIn、SignUp、UserList、UserSetting、ProjectList、ProjectDetail、TaskItemList、TaskItemDetail 的現行文字契約、核心欄位、狀態、操作與返回路徑；舊 PNG 差異以 `UIMock/README.md` 為準，desktop／mobile 皆通過。
 
-## 5. 覆蓋矩陣
+## 5. 實測覆蓋矩陣
 
-| 需求 | 主要案例 | Happy path | Edge／Error | State／Concurrency | 狀態 |
-|---|---|---:|---:|---:|---|
-| AUTH | AUTH 系列 001–022 | ✓ | ✓ | ✓ | Ready；Token、重寄／重放、SMTP 失敗 Log 與登入 rate limit 已通過 |
-| US-1 | TASK 系列 001–005 | ✓ | ✓ | ✓ | Ready |
-| US-2 | TASK 系列 006–018、TC-F-PREF-001 | ✓ | ✓ | ✓ | Ready |
-| US-3 | TC-F-AUTH-014、TC-F-TASK-006 | ✓ | ✓ | ✓ | Ready |
-| US-4 | TC-ST-TASK-003、TC-ERR-TASK-005、TC-F-TASK-021、CMT 系列 001–009 | ✓ | ✓ | ✓ | Ready |
-| US-5 | REM 系列 001–012、TC-E-PRJ-011 | ✓ | ✓ | ✓ | Ready；Project TimeZoneId、Hangfire Scanner／Sender、SQL claim／retry／告警均已完成 |
-| US-6 | TC-F-TASK-008、TC-ERR-TASK-009 | ✓ | ✓ | ✓ | Ready |
-| US-7 | TASK 系列 010–014、TC-ERR-TASK-022 | ✓ | ✓ | ✓ | Ready |
-| US-8 | TC-F-TASK-019、TC-ST-TASK-020、TC-SQL-003 | ✓ | ✓ | ✓ | Ready |
-| FLOW-PRJ | PRJ 系列 001–011 | ✓ | ✓ | ✓ | Ready |
-| FLOW-MEMBER | MEMBER 系列 001–009 | ✓ | ✓ | ✓ | Ready |
-| FLOW-USER | USER 系列 001–010 | ✓ | ✓ | ✓ | Ready；現行版本不含個資編輯 |
-| PREF | PREF 系列 001–002 | ✓ | ✓ | ✓ | Ready |
-| API／DB | SQL 系列 001–008、API 系列 001–005 | ✓ | ✓ | ✓ | Ready；SQL constraint、audit actor／snapshot 與 403／404 全端點矩陣均已完成 |
-| UI／UIMock | UI 系列 001–008 | ✓ | ✓ | ✓ | Ready；舊 PNG 差異依 `UIMock/README.md` |
+| 需求 | 主要案例 | Happy path | Edge／Error | State／Concurrency | 實測狀態 | 最近完整證據 |
+|---|---|---:|---:|---:|---|---|
+| AUTH | AUTH 系列 001–022 | ✓ | ✓ | ✓ | ✅ 已實測通過 | Backend 2026-09-16 20:47:27；E2E 20:44:21 |
+| US-1 | TASK 系列 001–005 | ✓ | ✓ | ✓ | ✅ 已實測通過 | Backend／Frontend 2026-09-16 20:47:27 |
+| US-2 | TASK 系列 006–018、TC-F-PREF-001 | ✓ | ✓ | ✓ | ✅ 已實測通過 | Backend／Frontend 2026-09-16 20:47:27；E2E 20:44:21 |
+| US-3 | TC-F-AUTH-014、TC-F-TASK-006 | ✓ | ✓ | ✓ | ✅ 已實測通過 | Backend 2026-09-16 20:47:27 |
+| US-4 | TC-ST-TASK-003、TC-ERR-TASK-005、TC-F-TASK-021、CMT 系列 001–009 | ✓ | ✓ | ✓ | ✅ 已實測通過 | Backend／Frontend 2026-09-16 20:47:27 |
+| US-5 | REM 系列 001–012、TC-E-PRJ-011 | ✓ | ✓ | ✓ | ✅ 已實測通過 | Backend／隔離部署 2026-09-16 20:47:27 |
+| US-6 | TC-F-TASK-008、TC-ERR-TASK-009 | ✓ | ✓ | ✓ | ✅ 已實測通過 | Backend／Frontend 2026-09-16 20:47:27 |
+| US-7 | TASK 系列 010–014、TC-ERR-TASK-022 | ✓ | ✓ | ✓ | ✅ 已實測通過 | Backend／Frontend 2026-09-16 20:47:27 |
+| US-8 | TC-F-TASK-019、TC-ST-TASK-020、TC-SQL-003 | ✓ | ✓ | ✓ | ✅ 已實測通過 | Backend／Frontend 2026-09-16 20:47:27 |
+| FLOW-PRJ | PRJ 系列 001–011 | ✓ | ✓ | ✓ | ✅ 已實測通過 | Backend／Frontend 2026-09-16 20:47:27；E2E 20:44:21 |
+| FLOW-MEMBER | MEMBER 系列 001–009 | ✓ | ✓ | ✓ | ✅ 已實測通過 | Backend／Frontend 2026-09-16 20:47:27 |
+| FLOW-USER | USER 系列 001–010 | ✓ | ✓ | ✓ | ✅ 已實測通過 | Backend／Frontend 2026-09-16 20:47:27；E2E 20:44:21 |
+| PREF | PREF 系列 001–002 | ✓ | ✓ | ✓ | ✅ 已實測通過 | Frontend 2026-09-16 20:47:27；E2E 20:44:21 |
+| API／DB | SQL 系列 001–008、API 系列 001–005 | ✓ | ✓ | ✓ | ✅ 已實測通過 | 實際 SQL Server 2026-09-16 20:47:27 |
+| UI／UIMock | UI 系列 001–008 | ✓ | ✓ | ✓ | ✅ 已實測通過 | Vitest 2026-09-16 20:47:27；E2E 20:44:21 |
 
-## 6. 自動化覆蓋摘要與建議順序
+## 6. 自動化實證摘要
 
-### 6.1 目前可確認的自動化
+| 測試層級 | 實際驗證內容 | 最後結果 | 最後時間 |
+|---|---|---|---|
+| Backend Unit | 註冊邊界、Domain 狀態與版本、Token entity、EF model metadata、SMTP options | ✅ Passed 61、Failed 0、Skipped 0 | 2026-09-16 20:47:27 +08:00 |
+| Backend Integration | Auth、User、Project、Member、Task、Comment、Reminder、OpenAPI、Problem Details、交易、併發、稽核 | ✅ Passed 98、Failed 0、Skipped 0 | 2026-09-16 20:47:27 +08:00 |
+| 實際 SQL Server | migration、constraint、rowversion、FK、transaction rollback、原子 claim 與資料後置狀態 | ✅ 已包含於 Integration 98／98 | 2026-09-16 20:47:27 +08:00 |
+| Frontend Vitest | HTTP client、Router、表單、清單、詳情、錯誤復原、loading／empty／success／error、ARIA 結構 | ✅ Passed 75、Failed 0、Skipped 0 | 2026-09-16 20:47:27 批次 |
+| Playwright E2E | 真實 API、desktop／mobile、登入、refresh、偏好、Project／Task、鍵盤、responsive、XSS | ✅ Passed 22、Failed 0、Skipped 0 | 2026-09-16 20:44:21 +08:00 |
+| 靜態品質閘門 | Backend format/build；Frontend type-check/ESLint/Prettier/production build | ✅ 全部通過；Backend 0 warnings／0 errors | 2026-09-16 20:47:27 批次 |
 
-- Backend Unit：註冊 validator、Bootstrap Admin policy、目前使用者 claims、Domain status／版本／token entity、EF model metadata、SMTP option。
-- Backend Integration：CSRF、註冊 validation Problem Details、OpenAPI surface；實際 SQL Server 的單一角色與業務編號完整性（未設定 `PMW_TEST_SQL_CONNECTION` 時會略過）。
-- Frontend Unit／Component：HTTP client 的 CSRF／Bearer／single-flight refresh／Problem Details、註冊導頁與欄位 mapping、Bootstrap Admin UI 保護、Project Role 複選、少量 Project detail 與 StatusBadge。
-- Frontend E2E：已由隔離腳本即時產生本機密碼並建立獨立 SQL volume，覆蓋登入、完整 redirect、語言唯一 storage key 與持久化、desktop／mobile 導覽、refresh restore、SMTP 失敗註冊／重寄／未驗證 Viewer，以及 Admin 建立 Project 與 Task；每輪自動清除且不讀取本機 SMTP credentials。
-
-### 6.2 建議自動化優先順序
-
-1. P0 Auth API／Service：正常登入、`/auth/me`、refresh 各失敗分支、logout 冪等、Email resend 失敗與 Token 安全規則。
-2. P0 API／Service 授權矩陣：Viewer、User assignee／non-assignee、ProjectManager、Administrator、Admin。
-3. 批次 Task 的全有或全無 transaction、rowVersion 衝突與 audit/history rollback。
-4. 角色／帳號狀態原子更新、最後一位 Admin 並行競態、token revocation。
-5. Project member 查詢／加入／角色取代／Owner 移交／未完成 Task 阻擋。
-6. Task／Comment 詳情、驗證、失敗回復、軟刪除、關聯保存與 query filters。
-7. 前端清單 query、返回狀態、checkbox 權限、確認偏好及 403/409/422 UX。
-8. 維持 TC-SQL-004 與 TC-SQL-006 的資料庫約束與稽核矩陣回歸。
-9. 維持 TC-ST-REM-001～012 的 clock-controlled、IANA timezone、Hangfire 與 SQL concurrency 回歸。
+後續不是再補「尚未自動化」案例，而是維持上述完整回歸：任何功能異動都必須重跑受影響案例與必要的全量測試，並更新 §8.1 的時間戳與結果。
 
 ## 7. 執行注意事項
 
@@ -1227,7 +1235,21 @@
 - 涉及時間的案例固定 `TimeProvider`、UTC 與 Project IANA timezone；到期提醒以 Project 當地日期作冪等鍵，並依 OPEN-010 的 DST／當日補跑規則驗證。
 - `Planned` 案例不是通過或失敗；它代表必須先完成需求決議或功能實作。
 
-## 8. 最近一次自動化執行紀錄
+## 8. 執行證據與時間戳
+
+### 8.1 當前有效的最終全量回歸
+
+| 執行時間 | 測試套件／環境 | 最終結果 | 判定 |
+|---|---|---|---|
+| 2026-09-16 20:47:27 +08:00 | Backend Unit | Passed 61、Failed 0、Skipped 0 | ✅ 可作為目前通過證據 |
+| 2026-09-16 20:47:27 +08:00 | Backend Integration／實際隔離 SQL Server | Passed 98、Failed 0、Skipped 0 | ✅ 可作為目前通過證據 |
+| 2026-09-16 20:47:27 批次 | Frontend Vitest | Passed 75、Failed 0、Skipped 0 | ✅ 可作為目前通過證據 |
+| 2026-09-16 20:44:21 +08:00 | Playwright desktop／mobile／全新 SQL volume | Passed 22、Failed 0、Skipped 0 | ✅ 可作為目前通過證據 |
+| 2026-09-16 20:47:27 批次 | Backend format/build、Frontend type-check/ESLint/Prettier/build | 全部通過；Backend 0 warnings／0 errors | ✅ 可作為目前品質閘門證據 |
+
+這組結果是目前判定「118 個案例全部實測通過」的權威快照。下方紀錄保留 TDD 紅燈、修正與重測歷程；只有最後結果為 Passed 且 Failed／Skipped 均為 0 的紀錄，才能當成完成證據。
+
+### 8.2 功能批次、缺陷修正與重測歷程
 
 - **執行時間**：2026-09-13 00:56–01:03（Asia/Taipei，UTC+08:00）
 - **Backend Unit 最終驗證**：`dotnet test tests/ProjectManagementWeb.UnitTests/ProjectManagementWeb.UnitTests.csproj --no-build`；Passed 58、Failed 0、Skipped 0。
@@ -1269,7 +1291,12 @@
 - **Project scope 403／404 全端點矩陣**：2026-09-16 15:39:03（Asia/Taipei，UTC+08:00），`ProjectApiTests` 與 `TaskApiTests` 新增 TC-SEC-API-005 合併矩陣，覆蓋 Project／Member／Task／Comment 的 list、detail、create、update、delete、Task 批次及被指派者更新授權順序；目標測試 Passed 2／Failed 0／Skipped 0。首次編譯因測試引用不存在的帳號名稱輔助方法失敗，改用既有 `GetAccountAsync` 後重跑通過；另確認 Administrator 沒有被指派者專用更新權限，因此該 endpoint 的已授權 404 路徑改由實際被指派者驗證，未放寬產品權限。
 - **SQL FK 刪除行為與 JWT 稽核來源**：2026-09-16 15:47:48（Asia/Taipei，UTC+08:00），新增 TC-SQL-004 真實 SQL Server 合併測試，並將 TC-SQL-006 actor／快照 assertions 合併進既有 Project、Member、Task、Comment、User 異動案例。首次稽核目標測試因 JSON 內中文採 `\uXXXX` escaping 導致 3 個字串 assertion 失敗，改為解析 JSON 欄位後 Passed 9／Failed 0／Skipped 0；完整 Backend 回歸 Unit Passed 61、Integration Passed 90、Failed 0、Skipped 0。
 - **Task 到期提醒、UI 完整矩陣與最終回歸**：2026-09-16 20:47:27（Asia/Taipei，UTC+08:00），完成 Hangfire Scanner／Sender、Project 當地 08:00 與同日補跑、DST 日期冪等、七日視窗、SQL 唯一建立與原子 claim、寄送前重查、5／15／60 分鐘重試、provider idempotency key、DB Failed／AlertedAt 與不含敏感資料的 Warning Log。首次隔離啟動發現低權限 API 帳號不能建立 Hangfire schema，已將 schema 初始化移到 migrator 權限邊界並關閉 runtime 自動建置；首次 UI E2E 亦發現關閉的手機 drawer 仍可進入 Tab 順序，已修正後重測。最終 Backend format、build 0 warnings／0 errors、Unit Passed 61／Failed 0／Skipped 0、Integration Passed 98／Failed 0／Skipped 0；Frontend Vitest Passed 75、type-check、lint、Prettier、production build 全部通過；全新 SQL volume 與即時密碼的隔離 Playwright desktop／mobile Passed 22／Failed 0／Skipped 0，結束後容器與 volume 已清除。118 個案例全部 Ready 且無部分覆蓋。
-- **Backend 本批次最終回歸**：2026-09-13 12:59:30（Asia/Taipei，UTC+08:00）；`dotnet format --verify-no-changes` 通過，`dotnet build --no-incremental` 為 0 warnings／0 errors，Unit Passed 58、Failed 0、Skipped 0，Integration Passed 24、Failed 0、Skipped 0。
-- **Frontend Vitest 最終驗證**：`npm test -- --reporter=verbose`；Test Files 11 passed，Tests 24 passed，Failed 0、Skipped 0。
-- **Frontend Playwright 基線**：`npm run test:e2e -- --reporter=list`；Passed 0、Failed 0、Skipped 10。當時尚未建立隔離 E2E 帳號及注入其本機執行密碼 `PMW_E2E_PASSWORD`，不得計為通過；進入 E2E 階段時依本文件規則由測試實作完成設定後重測。
-- **本輪完成狀態**：118 案全部為 Ready，且各案例皆有合併後的自動化證據；無 Planned、無部分覆蓋、無 skip/todo 冒充通過。Backend Unit Passed 61、Integration Passed 98；Frontend Vitest Passed 75、隔離 Playwright desktop／mobile Passed 22。
+### 8.3 歷史基線與不可作為目前完成證據的紀錄
+
+- **Backend 早期批次回歸**：2026-09-13 12:59:30（Asia/Taipei，UTC+08:00）；當時 Unit Passed 58、Integration Passed 24。這是功能尚未補齊前的歷史基線，不取代 §8.1 的 61／98 最終結果。
+- **Frontend 早期 Vitest 基線**：當時 Test Files 11 passed、Tests 24 passed。這是測試擴充前的歷史數字，不取代 §8.1 的 75／75 最終結果。
+- **Frontend Playwright 未設定環境基線**：當時 Passed 0、Failed 0、Skipped 10；因尚未建立隔離 E2E 帳號及注入本機執行密碼，明確不得計為通過。後續已由隔離腳本完成設定，最終結果以 §8.1 的 Passed 22、Failed 0、Skipped 0 為準。
+
+### 8.4 目前完成狀態
+
+118 案全部為 `Ready` 且為 `✅ 已實測通過`；無 Planned、無部分實測、無尚未實測，也沒有以 skip／todo 冒充通過。Backend Unit Passed 61、Integration Passed 98；Frontend Vitest Passed 75；隔離 Playwright desktop／mobile Passed 22。

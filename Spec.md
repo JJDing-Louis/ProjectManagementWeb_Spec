@@ -1,4 +1,6 @@
-#開發規格
+# 開發規格
+
+本索引依 2026-09-17 的目前實作整理。規格判讀順序以 `UserStory.md`、相關 Flowchart、C4、Schema 與 StaticData 為主；實際 API／資料庫契約仍需和 Backend source、EF Core migrations 及自動化測試一起核對。
 
 ## UserStory
 - UserStory.md
@@ -39,3 +41,10 @@
 
 ## StaticData(靜態資料)
 - StaticData.md
+
+## Implementation Status(實作狀態)
+- ImplementationBacklog.md（目前已完成項目與對應程式／migration／測試）
+
+## Test Cases And Logs(測試案例與日誌)
+- TestCases/ProjectManagementWeb-TestCases.md（118 個案例、實測覆蓋矩陣與時間戳）
+- TestCases/TestLogs/2026-09-16-第一次TDD測試日誌.md（第一次完整 TDD 回歸摘要）

@@ -1,10 +1,10 @@
 C4Container
-    title Project Management Web - Container Diagram（設計草稿）
+    title Project Management Web - Container Diagram（現行實作）
 
     Person(systemUser, "系統使用者", "訪客、專案成員、後台管理員與 Admin")
     System_Ext(emailService, "Google Gmail SMTP", "寄送帳號驗證信與 Task 到期提醒")
 
-    Container_Boundary(myWorkItemBoundary, "My Work Item") {
+    Container_Boundary(projectManagementWebBoundary, "Project Management Web") {
         Container(webApp, "前端網站", "Vue 3 SPA", "提供註冊、登入、使用者、專案、Task Item、留言與偏好設定畫面")
         Container(api, "後端 API", "ASP.NET Core Web API + Hangfire", "執行身分驗證、授權、業務規則、交易與稽核，以及 Task 到期掃描與寄送 Worker")
         ContainerDb(database, "應用程式資料庫", "SQL Server", "保存使用者、角色、Session、專案、Task、留言、偏好、提醒狀態、Hangfire 工作與稽核")

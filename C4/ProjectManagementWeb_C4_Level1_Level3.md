@@ -1,44 +1,44 @@
-# My Work Item：C4 Level 1～Level 3
+# Project Management Web：C4 Level 1～Level 3
 
-> 圖表狀態：設計草稿。實作完成後，仍須依實際程式碼、部署方式與外部服務重新核對。
+> 圖表狀態：已於 2026-09-17 依目前 Vue 3 SPA、ASP.NET Core Controllers／Services、Hangfire、SQL Server、SMTP 與 Docker Compose 實作同步；後續程式或部署邊界異動時仍需重新核對。
 
 ## Level 1：System Context Diagram
 
-這一層只描述使用者、My Work Item 系統，以及系統直接依賴的外部 Email 服務，不呈現 Vue、ASP.NET Core 或 SQL Server 等技術細節。
+這一層只描述使用者、Project Management Web 系統，以及系統直接依賴的外部 Email 服務，不呈現 Vue、ASP.NET Core 或 SQL Server 等技術細節。
 
 ```mermaid
 C4Context
-    title Project Management Web - System Context Diagram（設計草稿）
+    title Project Management Web - System Context Diagram（現行實作）
 
     Person(visitor, "訪客", "註冊帳號並完成 Email 驗證")
     Person(member, "專案成員", "查看所屬專案，處理 Task Item 與留言")
     Person(administrator, "後台管理員", "管理專案、成員與 Task Item")
     Person(admin, "Admin", "管理使用者、系統角色及全部專案資料")
 
-    System(myWorkItem, "My Work Item", "公司內部的專案、成員、Task Item 與留言管理系統")
+    System(projectManagementWeb, "Project Management Web", "公司內部的專案、成員、Task Item、留言與到期提醒管理系統")
     System_Ext(emailService, "Google Gmail SMTP", "寄送帳號驗證信與 Task 到期提醒")
 
-    Rel(visitor, myWorkItem, "註冊、驗證 Email 與登入", "HTTPS")
-    Rel(member, myWorkItem, "查看專案並處理工作", "HTTPS")
-    Rel(administrator, myWorkItem, "管理專案與工作", "HTTPS")
-    Rel(admin, myWorkItem, "管理系統與權限", "HTTPS")
-    Rel(myWorkItem, emailService, "寄送帳號驗證信與 Task 到期提醒", "SMTP")
+    Rel(visitor, projectManagementWeb, "註冊、驗證 Email 與登入", "HTTPS")
+    Rel(member, projectManagementWeb, "查看專案並處理工作", "HTTPS")
+    Rel(administrator, projectManagementWeb, "管理專案與工作", "HTTPS")
+    Rel(admin, projectManagementWeb, "管理系統與權限", "HTTPS")
+    Rel(projectManagementWeb, emailService, "寄送帳號驗證信與 Task 到期提醒", "SMTP")
 
     UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
 ```
 
 ## Level 2：Container Diagram
 
-C4 的 Container 是可執行應用程式或資料儲存的責任邊界，不等同 Docker Container。My Work Item 在 MVP 階段由前端 SPA、後端 API 與關聯式資料庫組成；Email 服務位於系統邊界之外。
+C4 的 Container 是可執行應用程式或資料儲存的責任邊界，不等同 Docker Container。Project Management Web 在 MVP 階段由前端 SPA、後端 API 與關聯式資料庫組成；Email 服務位於系統邊界之外。
 
 ```mermaid
 C4Container
-    title Project Management Web - Container Diagram（設計草稿）
+    title Project Management Web - Container Diagram（現行實作）
 
     Person(systemUser, "系統使用者", "訪客、專案成員、後台管理員與 Admin")
     System_Ext(emailService, "Google Gmail SMTP", "寄送帳號驗證信與 Task 到期提醒")
 
-    Container_Boundary(myWorkItemBoundary, "My Work Item") {
+    Container_Boundary(projectManagementWebBoundary, "Project Management Web") {
         Container(webApp, "前端網站", "Vue 3 SPA", "提供註冊、登入、使用者、專案、Task Item、留言與偏好設定畫面")
         Container(api, "後端 API", "ASP.NET Core Web API + Hangfire", "執行身分驗證、授權、業務規則、交易與稽核，以及 Task 到期掃描與寄送 Worker")
         ContainerDb(database, "應用程式資料庫", "SQL Server", "保存使用者、角色、Session、專案、Task、留言、偏好、提醒狀態、Hangfire 工作與稽核")
@@ -54,17 +54,17 @@ C4Container
 
 ## Level 3A：Frontend SPA Component Diagram
 
-這張圖只展開 Vue 3 SPA。畫面 Component 依 Day6 的八張草圖分組；Email 驗證、Task 新增表單與批次狀態確認雖然尚未有草圖，但已由 Day3 的 User Story 明確定義，因此一併納入規劃。
+這張圖只展開目前 Vue 3 SPA。Component 依實際 Router、Views、Pinia stores、typed service contracts 與 HTTP adapters 分組；Email 驗證、Task 表單與批次狀態確認皆已實作並納入測試。
 
 ```mermaid
 C4Component
-    title Project Management Web - Frontend SPA Component Diagram（設計草稿）
+    title Project Management Web - Frontend SPA Component Diagram（現行實作）
 
     Container(api, "後端 API", "ASP.NET Core Web API", "驗證權限並執行業務流程")
 
     Container_Boundary(webBoundary, "前端網站（Vue 3 SPA）") {
         Component(router, "Router 與 Route Guards", "Vue Router", "依登入狀態與角色載入頁面；僅負責導覽，不取代後端授權")
-        Component(authViews, "帳號與驗證畫面", "Vue Views", "SignIn、SignUp、EmailVerification 與 ResendVerification")
+        Component(authViews, "帳號與驗證畫面", "Vue Views", "SignInView、SignUpView、VerifyEmailView 與 ResendVerificationView")
         Component(userViews, "使用者與偏好畫面", "Vue Views", "UserList、UserDetail 與 Settings")
         Component(projectViews, "專案管理畫面", "Vue Views", "ProjectList、ProjectDetail 與 ProjectForm")
         Component(taskViews, "Task 與留言畫面", "Vue Views", "TaskList、TaskDetail 與 TaskForm；批次確認現由 TaskList 處理")
@@ -87,14 +87,14 @@ C4Component
 
 ```mermaid
 C4Component
-    title Project Management Web - Backend API Component Diagram（設計草稿）
+    title Project Management Web - Backend API Component Diagram（現行實作）
 
     Container_Boundary(apiBoundary, "後端 API（ASP.NET Core Web API）") {
 
         Boundary(controllerLayer, "Controller Layer", "Presentation") {
-            Component(authController, "Account Controller", "ASP.NET Core Controller", "處理註冊、登入、登出、Token 更新、Email 驗證與重新寄送")
-            Component(userControllers, "User Controllers", "ASP.NET Core Controller", "UsersController、UserPreferencesController")
-            Component(projectControllers, "Project Controllers", "ASP.NET Core Controller", "ProjectsController、ProjectMembersController")
+            Component(authController, "Auth / Security Controllers", "ASP.NET Core Controller", "AuthController、SecurityController")
+            Component(userControllers, "User / Role Controllers", "ASP.NET Core Controller", "UsersController、RolesController；偏好由 UsersController 提供")
+            Component(projectControllers, "Project Controller", "ASP.NET Core Controller", "ProjectsController；同時提供 Project Members API")
             Component(taskControllers, "Task Controllers", "ASP.NET Core Controller", "TaskItemsController、CommentsController")
         }
 
@@ -143,19 +143,19 @@ C4Component
 
 ```mermaid
 C4Component
-    title Project Management Web - Frontend Component to Controller Mapping（設計草稿）
+    title Project Management Web - Frontend Component to Controller Mapping（現行實作）
 
     Container_Boundary(webBoundary, "前端網站（Vue 3 SPA）") {
-        Component(authViews, "帳號與驗證畫面", "Vue Views", "SignIn、SignUp、EmailVerification、ResendVerification")
+        Component(authViews, "帳號與驗證畫面", "Vue Views", "SignInView、SignUpView、VerifyEmailView、ResendVerificationView")
         Component(userViews, "使用者與偏好畫面", "Vue Views", "UserList、UserDetail、Settings")
         Component(projectViews, "專案管理畫面", "Vue Views", "ProjectList、ProjectDetail、ProjectForm")
         Component(taskViews, "Task 與留言畫面", "Vue Views", "TaskList、TaskDetail、TaskForm")
     }
 
     Container_Boundary(apiBoundary, "後端 API（ASP.NET Core Web API）") {
-        Component(authController, "AuthController", "Controller", "帳號、Session、Token 與 Email 驗證")
-        Component(userControllers, "UsersController / UserPreferencesController", "Controllers", "使用者、系統角色與個人偏好")
-        Component(projectControllers, "ProjectsController / ProjectMembersController", "Controllers", "專案、Owner、成員與專案角色")
+        Component(authController, "AuthController / SecurityController", "Controllers", "帳號、Session、Token、Email 驗證與 CSRF token")
+        Component(userControllers, "UsersController / RolesController", "Controllers", "使用者、系統角色與個人偏好")
+        Component(projectControllers, "ProjectsController", "Controller", "專案、Owner、成員與專案角色")
         Component(taskControllers, "TaskItemsController / CommentsController", "Controllers", "Task、批次狀態、軟刪除與留言")
     }
 
