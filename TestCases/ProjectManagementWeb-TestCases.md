@@ -379,23 +379,23 @@
 - **資料後置狀態**：每次成功後仍只有一個系統角色；失敗時完全不變。
 - **現有自動化覆蓋**：完整（Backend）：`UserApiTests.分離角色與狀態Api應只改指定面向並各自使Session失效` 已於 2026-09-13 以真實 SQL Server 通過 role API 只改角色、status API 只改啟用狀態，兩者各自遞增一次 TokenVersion、撤銷 Refresh Token 並寫入對應 audit；未驗證、最後 Admin、bootstrap 保護由同檔其他案例共用驗證。
 
-#### TC-E-USER-008 現行版本不提供個資編輯
-- **類型與優先級**：Negative contract／P2；**測試層級**：UI、API；**狀態**：Ready
+#### TC-F-USER-008 使用者維護自己的名稱與電話號碼
+- **類型與優先級**：Functional／P1；**測試層級**：UI、API、SQL；**狀態**：Ready
 - **對應需求**：User Story「畫面與查詢契約」；CON-009
-- **前置條件**：一般登入使用者與 Admin。
-- **測試步驟**：1. 開啟 `/settings`。2. 開啟 `/users/{id}`。3. 檢查可用 API 與畫面操作。
-- **預期結果**：Settings 只提供語言與批次確認偏好；User Detail 只讀顯示帳號、名稱、Email 與驗證狀態，Admin 只可修改系統角色與啟用狀態；不存在 Account、Name、Email 編輯 request。
-- **資料後置狀態**：個資不變；只有使用者明確儲存時才異動偏好、系統角色或啟用狀態。
-- **現有自動化覆蓋**：完整：`UserApiTests.OpenApi的使用者異動Dto應只包含角色狀態與偏好欄位` 已於 2026-09-13 驗證 OpenAPI；`bootstrapAdminProtection.spec.ts` 與 `settingsView.spec.ts` 已於 2026-09-15 驗證 User Detail 個資唯讀、偏好更新與 Viewer 無儲存控制。
+- **前置條件**：任一已登入帳號，包含 `Viewer` 與 Email 尚未驗證帳號。
+- **測試步驟**：1. 開啟 `/settings`。2. 讀取 `GET /users/me/profile`。3. 修改名稱與電話後送出 `PUT /users/me/profile`。4. 以空白電話清除。5. 嘗試空白／超長名稱、無效／超長電話。6. 檢查其他帳號、OpenAPI 與 audit。
+- **預期結果**：只能更新目前登入者；名稱與電話會 trim 並持久化，空白電話儲存為 null，畫面導覽名稱立即同步；無效輸入回 400 `validation_error` 與欄位錯誤且資料不變；request 不包含帳號、Email、角色或啟用狀態；audit 只記錄異動欄位名稱，不保存個資內容。
+- **資料後置狀態**：成功時只異動本人名稱與電話；失敗時本人與其他帳號均不變。
+- **現有自動化覆蓋**：完整：`UserApiTests.登入使用者可讀取修改並清除自己的名稱與電話且不影響他人`、`UserApiTests.個人資料更新應拒絕空白過長名稱及無效電話並保持原資料`、`UserApiTests.OpenApi應只開放名稱電話角色狀態與偏好等已確認的使用者異動欄位` 與 `settingsView.spec.ts`。
 
 #### TC-F-USER-009 本人與管理者讀取使用者詳情
 - **類型與優先級**：Functional／P1；**測試層級**：API、UI；**狀態**：Ready
 - **對應需求**：User Story「畫面與查詢契約」；FLOW-USER；`GET /users/{id}`；OPEN-016
 - **前置條件**：一般帳號本人、具 `accounts.read` 的 Admin，以及存在與不存在的 userId。
 - **測試步驟**：1. 本人讀取自己的詳情。2. Admin 讀取他人詳情。3. Admin 在具 `accounts.read` 的已授權條件下讀取不存在 ID。4. 一般 User／Viewer 讀取非本人且不存在 ID。5. 核對 `/users/{id}` 顯示內容與可操作控制。
-- **預期結果**：存在資料回 200，包含帳號、顯示名稱、Email、驗證狀態、啟用狀態、唯一系統角色及 bootstrap 標記；Admin 對不存在 ID 回 404 `not_found`；一般 User／Viewer 對任何非本人 ID（包含不存在 ID）均回 403；一般本人只讀，Admin 僅依 functions 顯示角色／啟用狀態控制，不提供個資編輯。
+- **預期結果**：存在資料回 200，包含帳號、顯示名稱、電話號碼、Email、驗證狀態、啟用狀態、唯一系統角色及 bootstrap 標記；Admin 對不存在 ID 回 404 `not_found`；一般 User／Viewer 對任何非本人 ID（包含不存在 ID）均回 403；一般本人只讀，Admin 僅依 functions 顯示角色／啟用狀態控制，不提供個資編輯。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：完整：`UserApiTests.使用者詳情應依本人與AccountsRead能力套用已確認的403與404優先序` 已依 OPEN-016 通過 User／Viewer 本人 detail 完整欄位 200、非本人與不存在 ID 403、Admin 讀他人 200 及不存在 ID 404；`bootstrapAdminProtection.spec.ts` 驗證詳情顯示帳號、名稱、Email、驗證／啟用與角色，無管理能力時維持唯讀且不顯示管理表單。
+- **現有自動化覆蓋**：完整：`UserApiTests.使用者詳情應依本人與AccountsRead能力套用已確認的403與404優先序` 已依 OPEN-016 通過 User／Viewer 本人 detail 完整欄位（含名稱與電話）200、非本人與不存在 ID 403、Admin 讀他人 200 及不存在 ID 404；`bootstrapAdminProtection.spec.ts` 驗證詳情顯示帳號、名稱、電話、Email、驗證／啟用與角色，無管理能力時維持唯讀且不顯示管理表單；`app.spec.ts` 以正式 API 驗證本人更新後可在詳情頁看到名稱與電話。
 
 #### TC-ERR-USER-010 帳號管理授權與不存在的帳號／角色
 - **類型與優先級**：Security／P0；**測試層級**：Service、API、SQL、UI；**狀態**：Ready
@@ -1242,10 +1242,10 @@
 | 執行時間 | 測試套件／環境 | 最終結果 | 判定 |
 |---|---|---|---|
 | 2026-09-16 20:47:27 +08:00 | Backend Unit | Passed 61、Failed 0、Skipped 0 | ✅ 可作為目前通過證據 |
-| 2026-09-16 20:47:27 +08:00 | Backend Integration／實際隔離 SQL Server | Passed 98、Failed 0、Skipped 0 | ✅ 可作為目前通過證據 |
-| 2026-09-16 20:47:27 批次 | Frontend Vitest | Passed 75、Failed 0、Skipped 0 | ✅ 可作為目前通過證據 |
-| 2026-09-16 20:44:21 +08:00 | Playwright desktop／mobile／全新 SQL volume | Passed 22、Failed 0、Skipped 0 | ✅ 可作為目前通過證據 |
-| 2026-09-16 20:47:27 批次 | Backend format/build、Frontend type-check/ESLint/Prettier/build | 全部通過；Backend 0 warnings／0 errors | ✅ 可作為目前品質閘門證據 |
+| 2026-09-21 02:51:02 +08:00 | Backend Integration／實際隔離 SQL Server | Passed 101、Failed 0、Skipped 0 | ✅ 可作為目前通過證據 |
+| 2026-09-21 02:51:02 +08:00 | Frontend Vitest | Passed 79、Failed 0、Skipped 0 | ✅ 可作為目前通過證據 |
+| 2026-09-21 02:51:02 +08:00 | Playwright desktop／mobile／全新 SQL volume | Passed 26、Failed 0、Skipped 0 | ✅ 可作為目前通過證據 |
+| 2026-09-21 02:51:02 +08:00 | Backend format/build/Unit、Frontend type-check/ESLint/Prettier/build | 全部通過；Backend Unit Passed 61、0 warnings／0 errors | ✅ 可作為目前品質閘門證據 |
 
 這組結果是目前判定「118 個案例全部實測通過」的權威快照。下方紀錄保留 TDD 紅燈、修正與重測歷程；只有最後結果為 Passed 且 Failed／Skipped 均為 0 的紀錄，才能當成完成證據。
 
@@ -1291,6 +1291,7 @@
 - **Project scope 403／404 全端點矩陣**：2026-09-16 15:39:03（Asia/Taipei，UTC+08:00），`ProjectApiTests` 與 `TaskApiTests` 新增 TC-SEC-API-005 合併矩陣，覆蓋 Project／Member／Task／Comment 的 list、detail、create、update、delete、Task 批次及被指派者更新授權順序；目標測試 Passed 2／Failed 0／Skipped 0。首次編譯因測試引用不存在的帳號名稱輔助方法失敗，改用既有 `GetAccountAsync` 後重跑通過；另確認 Administrator 沒有被指派者專用更新權限，因此該 endpoint 的已授權 404 路徑改由實際被指派者驗證，未放寬產品權限。
 - **SQL FK 刪除行為與 JWT 稽核來源**：2026-09-16 15:47:48（Asia/Taipei，UTC+08:00），新增 TC-SQL-004 真實 SQL Server 合併測試，並將 TC-SQL-006 actor／快照 assertions 合併進既有 Project、Member、Task、Comment、User 異動案例。首次稽核目標測試因 JSON 內中文採 `\uXXXX` escaping 導致 3 個字串 assertion 失敗，改為解析 JSON 欄位後 Passed 9／Failed 0／Skipped 0；完整 Backend 回歸 Unit Passed 61、Integration Passed 90、Failed 0、Skipped 0。
 - **Task 到期提醒、UI 完整矩陣與最終回歸**：2026-09-16 20:47:27（Asia/Taipei，UTC+08:00），完成 Hangfire Scanner／Sender、Project 當地 08:00 與同日補跑、DST 日期冪等、七日視窗、SQL 唯一建立與原子 claim、寄送前重查、5／15／60 分鐘重試、provider idempotency key、DB Failed／AlertedAt 與不含敏感資料的 Warning Log。首次隔離啟動發現低權限 API 帳號不能建立 Hangfire schema，已將 schema 初始化移到 migrator 權限邊界並關閉 runtime 自動建置；首次 UI E2E 亦發現關閉的手機 drawer 仍可進入 Tab 順序，已修正後重測。最終 Backend format、build 0 warnings／0 errors、Unit Passed 61／Failed 0／Skipped 0、Integration Passed 98／Failed 0／Skipped 0；Frontend Vitest Passed 75、type-check、lint、Prettier、production build 全部通過；全新 SQL volume 與即時密碼的隔離 Playwright desktop／mobile Passed 22／Failed 0／Skipped 0，結束後容器與 volume 已清除。118 個案例全部 Ready 且無部分覆蓋。
+- **本人名稱與電話號碼修改**：2026-09-21 02:51:02（Asia/Taipei，UTC+08:00），新增 `GET/PUT /users/me/profile`，沿用既有 Identity `PhoneNumber`，名稱 trim 後必填且最多 100 字、電話可清除且最多 30 字並驗證格式；Viewer 與未驗證帳號也只能修改自己的這兩個欄位。Backend build 0 warnings／0 errors、format 通過、Unit Passed 61／Failed 0／Skipped 0；以獨立 SQL Server 執行 `UserApiTests` Passed 14／Failed 0／Skipped 0，完整 Integration 首輪因未把 migration timezone 與空白 bootstrap account 注入測試 process 而為 Passed 84／Failed 17，修正執行環境後最終 Passed 101／Failed 0／Skipped 0。Frontend Vitest Passed 79／Failed 0／Skipped 0，type-check、lint、Prettier、production build 全部通過；隔離 Playwright 首輪重現 bootstrap Admin 空名稱 fallback 與既有模糊 locator 問題，修正後 desktop／mobile Passed 26／Failed 0／Skipped 0，結束後容器與 volume 已清除。
 ### 8.3 歷史基線與不可作為目前完成證據的紀錄
 
 - **Backend 早期批次回歸**：2026-09-13 12:59:30（Asia/Taipei，UTC+08:00）；當時 Unit Passed 58、Integration Passed 24。這是功能尚未補齊前的歷史基線，不取代 §8.1 的 61／98 最終結果。
@@ -1299,4 +1300,4 @@
 
 ### 8.4 目前完成狀態
 
-118 案全部為 `Ready` 且為 `✅ 已實測通過`；無 Planned、無部分實測、無尚未實測，也沒有以 skip／todo 冒充通過。Backend Unit Passed 61、Integration Passed 98；Frontend Vitest Passed 75；隔離 Playwright desktop／mobile Passed 22。
+118 案全部為 `Ready` 且為 `✅ 已實測通過`；無 Planned、無部分實測、無尚未實測，也沒有以 skip／todo 冒充通過。Backend Unit Passed 61、Integration Passed 101；Frontend Vitest Passed 79；隔離 Playwright desktop／mobile Passed 26。
