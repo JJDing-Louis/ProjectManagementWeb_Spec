@@ -1,5 +1,7 @@
 # 新增與修改 Task Item（後台使用者）
 
+> 實作同步：2026-09-24。建立與完整修改分別對應 TaskItemsController 的 POST／PUT；Task Code 由後端產生，表單不接受 Code。
+
 ```mermaid
 flowchart TB
     adminTaskList([Task Item List]) --> taskAction{選擇操作}

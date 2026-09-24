@@ -1,6 +1,6 @@
 # Project Management Web：C4 Level 1～Level 3
 
-> 圖表狀態：已於 2026-09-17 依目前 Vue 3 SPA、ASP.NET Core Controllers／Services、Hangfire、SQL Server、SMTP 與 Docker Compose 實作同步；後續程式或部署邊界異動時仍需重新核對。
+> 圖表狀態：已於 2026-09-24 依目前 Vue 3 SPA、ASP.NET Core Controllers／Services、Hangfire、SQL Server、SMTP 與 Docker Compose 實作同步；本輪納入本人 Profile、使用者清單內聯管理及可搜尋成員下拉選單。
 
 ## Level 1：System Context Diagram
 
@@ -11,7 +11,7 @@ C4Context
     title Project Management Web - System Context Diagram（現行實作）
 
     Person(visitor, "訪客", "註冊帳號並完成 Email 驗證")
-    Person(member, "專案成員", "查看所屬專案，處理 Task Item 與留言")
+    Person(member, "專案成員", "維護個人名稱與電話，查看所屬專案，處理 Task Item 與留言")
     Person(administrator, "後台管理員", "管理專案、成員與 Task Item")
     Person(admin, "Admin", "管理使用者、系統角色及全部專案資料")
 
@@ -19,7 +19,7 @@ C4Context
     System_Ext(emailService, "Google Gmail SMTP", "寄送帳號驗證信與 Task 到期提醒")
 
     Rel(visitor, projectManagementWeb, "註冊、驗證 Email 與登入", "HTTPS")
-    Rel(member, projectManagementWeb, "查看專案並處理工作", "HTTPS")
+    Rel(member, projectManagementWeb, "維護個人資料、查看專案並處理工作", "HTTPS")
     Rel(administrator, projectManagementWeb, "管理專案與工作", "HTTPS")
     Rel(admin, projectManagementWeb, "管理系統與權限", "HTTPS")
     Rel(projectManagementWeb, emailService, "寄送帳號驗證信與 Task 到期提醒", "SMTP")
@@ -39,7 +39,7 @@ C4Container
     System_Ext(emailService, "Google Gmail SMTP", "寄送帳號驗證信與 Task 到期提醒")
 
     Container_Boundary(projectManagementWebBoundary, "Project Management Web") {
-        Container(webApp, "前端網站", "Vue 3 SPA", "提供註冊、登入、使用者、專案、Task Item、留言與偏好設定畫面")
+        Container(webApp, "前端網站", "Vue 3 SPA", "提供註冊、登入、個人資料、使用者管理、專案、Task Item、留言與偏好設定畫面")
         Container(api, "後端 API", "ASP.NET Core Web API + Hangfire", "執行身分驗證、授權、業務規則、交易與稽核，以及 Task 到期掃描與寄送 Worker")
         ContainerDb(database, "應用程式資料庫", "SQL Server", "保存使用者、角色、Session、專案、Task、留言、偏好、提醒狀態、Hangfire 工作與稽核")
     }
@@ -65,15 +65,15 @@ C4Component
     Container_Boundary(webBoundary, "前端網站（Vue 3 SPA）") {
         Component(router, "Router 與 Route Guards", "Vue Router", "依登入狀態與角色載入頁面；僅負責導覽，不取代後端授權")
         Component(authViews, "帳號與驗證畫面", "Vue Views", "SignInView、SignUpView、VerifyEmailView 與 ResendVerificationView")
-        Component(userViews, "使用者與偏好畫面", "Vue Views", "UserList、UserDetail 與 Settings")
-        Component(projectViews, "專案管理畫面", "Vue Views", "ProjectList、ProjectDetail 與 ProjectForm")
+        Component(userViews, "使用者、個人資料與偏好畫面", "Vue Views", "UserList 內聯管理角色與狀態、UserDetail 唯讀個資與管理表單、Settings 本人名稱電話與偏好")
+        Component(projectViews, "專案管理畫面", "Vue Views", "ProjectList、ProjectDetail、ProjectForm 與可搜尋成員下拉選單")
         Component(taskViews, "Task 與留言畫面", "Vue Views", "TaskList、TaskDetail 與 TaskForm；批次確認現由 TaskList 處理")
-        Component(clientState, "狀態與 API Client", "Pinia / HTTP Client", "保存登入狀態與查詢條件，統一處理 Token、HTTP 錯誤及 API 呼叫")
+        Component(clientState, "狀態與 API Client", "Pinia / HTTP Client", "保存記憶體 Access Token 與目前使用者，統一處理 CSRF、single-flight refresh、DTO mapping、HTTP 錯誤及 API 呼叫")
     }
 
     Rel(router, clientState, "讀取登入狀態")
     Rel(authViews, clientState, "帳號 API")
-    Rel(userViews, clientState, "使用者 API")
+    Rel(userViews, clientState, "使用者、本人 Profile 與偏好 API")
     Rel(projectViews, clientState, "專案 API")
     Rel(taskViews, clientState, "Task API")
     Rel(clientState, api, "呼叫 RESTful API", "JSON/HTTPS")
@@ -99,7 +99,7 @@ C4Component
         }
 
         Boundary(applicationLayer, "Application / Service Layer", "Application") {
-            Component(identityService, "Identity 與 User Service", "C#", "執行帳號、Session、角色、登入雙維度限流、3 分鐘一次性 Email Token、重寄限流與偏好規則")
+            Component(identityService, "Identity 與 User Service", "C#", "執行帳號、Session、本人名稱電話、角色與狀態原子異動、Bootstrap Admin 保護、登入雙維度限流、3 分鐘一次性 Email Token、重寄限流與偏好規則")
             Component(projectService, "Project Service", "C#", "執行專案、Owner、成員、角色與版本衝突規則")
             Component(taskService, "Task 與 Comment Service", "C#", "執行任意狀態更新、指派、批次交易、軟刪除與留言規則")
             Component(reminderScanner, "Task Reminder Scanner", "Hangfire Recurring Job", "依 Project 當地日期於 08:00 後掃描七日視窗，建立不重複的提醒工作")
@@ -147,20 +147,20 @@ C4Component
 
     Container_Boundary(webBoundary, "前端網站（Vue 3 SPA）") {
         Component(authViews, "帳號與驗證畫面", "Vue Views", "SignInView、SignUpView、VerifyEmailView、ResendVerificationView")
-        Component(userViews, "使用者與偏好畫面", "Vue Views", "UserList、UserDetail、Settings")
-        Component(projectViews, "專案管理畫面", "Vue Views", "ProjectList、ProjectDetail、ProjectForm")
+        Component(userViews, "使用者、個人資料與偏好畫面", "Vue Views", "UserList、UserDetail、Settings")
+        Component(projectViews, "專案管理畫面", "Vue Views", "ProjectList、ProjectDetail、ProjectForm、SearchableSelectDropdown")
         Component(taskViews, "Task 與留言畫面", "Vue Views", "TaskList、TaskDetail、TaskForm")
     }
 
     Container_Boundary(apiBoundary, "後端 API（ASP.NET Core Web API）") {
         Component(authController, "AuthController / SecurityController", "Controllers", "帳號、Session、Token、Email 驗證與 CSRF token")
-        Component(userControllers, "UsersController / RolesController", "Controllers", "使用者、系統角色與個人偏好")
+        Component(userControllers, "UsersController / RolesController", "Controllers", "使用者清單與詳情、本人 Profile、系統角色、帳號狀態與個人偏好")
         Component(projectControllers, "ProjectsController", "Controller", "專案、Owner、成員與專案角色")
         Component(taskControllers, "TaskItemsController / CommentsController", "Controllers", "Task、批次狀態、軟刪除與留言")
     }
 
     Rel(authViews, authController, "註冊、登入、驗證與登出 API", "JSON/HTTPS")
-    Rel(userViews, userControllers, "使用者查詢、角色與偏好 API", "JSON/HTTPS")
+    Rel(userViews, userControllers, "使用者查詢、本人 Profile、角色、狀態與偏好 API", "JSON/HTTPS")
     Rel(projectViews, projectControllers, "專案與成員管理 API", "JSON/HTTPS")
     Rel(taskViews, taskControllers, "Task、批次狀態與留言 API", "JSON/HTTPS")
 
@@ -173,7 +173,7 @@ C4Component
 - Level 2 不把頁面、Controller、Service、Repository 或資料表誤當成 Container。
 - Level 3A 與 Level 3B 各自只展開一個 Container；Level 3C 是為了核對畫面與 Controller 而提供的跨 Container 補充圖。
 - 畫面與 Controller 的對應代表功能責任，不表示 Vue View 會略過 API Client 或直接呼叫 C# 類別。
-- Controller 名稱是依目前 User Story 與 UI 草圖提出的設計命名；後端實作完成後，須再依實際 Route 與類別名稱回頭校正。
+- Controller 名稱與責任已依目前實際 Route 與類別校正；新增 Controller 或拆分 route 時必須同步此圖。
 - Component 表示責任單元，不保證每個元件只會對應一個 Class 或一個檔案。
 - 前端的按鈕顯示與 Disabled 狀態只改善操作體驗，所有授權、rowVersion 與目標狀態 enum 值仍由後端重新驗證；Project／Task 的四種合法狀態可任意互轉並包含相同狀態更新。
 - Task 批次更新由應用服務建立單一交易邊界，任一項失敗即整批不更新。

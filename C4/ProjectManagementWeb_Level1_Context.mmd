@@ -2,7 +2,7 @@ C4Context
     title Project Management Web - System Context Diagram（現行實作）
 
     Person(visitor, "訪客", "註冊帳號並完成 Email 驗證")
-    Person(member, "專案成員", "查看所屬專案，處理 Task Item 與留言")
+    Person(member, "專案成員", "維護個人名稱與電話，查看所屬專案，處理 Task Item 與留言")
     Person(administrator, "後台管理員", "管理專案、成員與 Task Item")
     Person(admin, "Admin", "管理使用者、系統角色及全部專案資料")
 
@@ -10,7 +10,7 @@ C4Context
     System_Ext(emailService, "Google Gmail SMTP", "寄送帳號驗證信與 Task 到期提醒")
 
     Rel(visitor, projectManagementWeb, "註冊、驗證 Email 與登入", "HTTPS")
-    Rel(member, projectManagementWeb, "查看專案並處理工作", "HTTPS")
+    Rel(member, projectManagementWeb, "維護個人資料、查看專案並處理工作", "HTTPS")
     Rel(administrator, projectManagementWeb, "管理專案與工作", "HTTPS")
     Rel(admin, projectManagementWeb, "管理系統與權限", "HTTPS")
     Rel(projectManagementWeb, emailService, "寄送帳號驗證信與 Task 到期提醒", "SMTP")

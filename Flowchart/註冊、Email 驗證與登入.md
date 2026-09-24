@@ -1,5 +1,7 @@
 # 註冊、Email 驗證與登入
 
+> 實作同步：2026-09-24。Auth POST 先取得 CSRF token；Access Token 只保存在前端記憶體，Refresh Token 使用 HttpOnly Cookie。
+
 ## 註冊與 Email 驗證
 
 ```mermaid
@@ -31,7 +33,7 @@ flowchart TB
 ```mermaid
 flowchart TB
     loginStart([進入登入頁]) --> enterCredentials[輸入帳號與密碼]
-    enterCredentials --> rateLimited{帳號或來源 IP<br/>15 分鐘內已達 5 次失敗？}
+    enterCredentials --> rateLimited{帳號或來源 IP 在 15 分鐘內已達 5 次失敗？}
     rateLimited -->|是| recordLimited[記錄 RateLimited 稽核與安全 Warning Log]
     recordLimited --> showRateLimit[回 429 rate_limited]
     showRateLimit --> loginStart
@@ -41,7 +43,9 @@ flowchart TB
     fifthFailure -->|否| showLoginError[回 401 並顯示一般性登入失敗訊息]
     fifthFailure -->|是| showRateLimit
     showLoginError --> loginStart
-    loginAllowed -->|是| taskList([進入 Task Item 清單])
+    loginAllowed -->|是| issueSession[核發記憶體 Access Token 與 HttpOnly Refresh Cookie]
+    issueSession --> currentUser[呼叫 auth me 載入角色與 Functions]
+    currentUser --> projectList([進入 Project 清單或原 redirect 位置])
 ```
 
 登入失敗訊息不應透露帳號是否存在，且不得鎖定帳號。同一帳號或來源 IP 在滾動 15 分鐘內第 5 次失敗起回 429；共用 SQL 計數讓多執行個體採用同一門檻。只有 allowlist 內的 Proxy 才可提供 forwarded IP，否則一律使用直接連線位址；安全 Log 不記錄帳號、IP、密碼或 Token。已停用的帳號不能登入；Email 尚未驗證的帳號可以登入，但 Access Token 與當前帳號資料的有效系統角色固定為 `Viewer`，不得進行寫入操作。Email 驗證完成後仍維持 `Viewer`，不會自動晉升為 `User`；必須由 Admin 另行調整系統角色。驗證 Token 自簽發起有效 3 分鐘且只能使用一次；成功重寄才會使舊 Token 失效，SMTP 失敗只留安全 Log，不得廢止使用者原本仍有效的 Token。

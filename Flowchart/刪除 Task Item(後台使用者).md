@@ -1,5 +1,7 @@
 # 刪除 Task Item（後台使用者）
 
+> 實作同步：2026-09-24。對應 `DELETE /api/v1/projects/{projectId}/task-items/{taskId}?rowVersion=...`，由 `TaskItemsController` 與 `TaskService` 執行。
+
 ```mermaid
 flowchart TB
     deleteStart([Task Item List]) --> chooseDeletion[選擇要刪除的 Task]

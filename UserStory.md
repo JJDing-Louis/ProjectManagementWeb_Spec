@@ -19,6 +19,7 @@ Task 狀態是所有專案成員共用的工作狀態，不會為每位使用者
 - Project 名稱為必填，前後端均以 trim 後的值驗證，長度必須為 1–200 個字元。
 - Project Description 為選填，若有值則 trim 後最多 4000 個字元。
 - Project Owner 為必填，且必須是已啟用、Email 已驗證、系統角色恰為 `Administrator` 的帳號；`Admin`、`User`、`Viewer` 均不得擔任。修改專案時，新 Owner 還必須已是該專案成員。
+- 建立 Project 時，Owner 會同時成為專案成員並取得 `ProjectManager`；移交 Owner 時，後端會確保新 Owner 具有 `ProjectManager`，舊 Owner 原有的 Project Roles 不會自動移除。
 - Project 的 IANA `TimeZoneId` 為必填；新 Project 必須明確指定合法值，不得自動套用系統預設時區。既有 Project 由部署時提供的合法 IANA timezone 透過 migration 回填。
 - 只有 `Administrator` 與 `Admin` 可以軟刪除 Project，請求必須帶最新 rowVersion。成功後記錄 `DeletedAt`、`DeletedByAccountId` 與 AuditLog，成員、Task、Comment 及 history 保留但從一般 Project scope 隱藏；本期不提供還原或永久刪除。
 - 一名專案成員可同時具有一個或多個 Project Role。新增成員與修改角色時都必須指定至少一個有效角色；修改操作會完整取代該成員目前的角色集合。
@@ -31,9 +32,12 @@ Task 狀態是所有專案成員共用的工作狀態，不會為每位使用者
 - Project 清單使用單一 `search` 條件模糊查詢 Project Code、Name 與 Description，並可以 `status` 篩選；現行版本不提供 Owner 篩選。
 - Project 的 `Pending`、`Active`、`Completed`、`Archived` 允許任意互轉，也允許更新為相同狀態；本期不限制狀態轉換路徑。
 - `/settings` 提供個人資料與操作偏好。個人資料可修改自己的顯示名稱與電話號碼；語言儲存在瀏覽器本機；批次確認偏好透過後端 API 依帳號保存。
-- `/users/{id}` 顯示帳號、顯示名稱、電話號碼、Email 與驗證狀態；Admin 只能在此調整單一系統角色與帳號啟用狀態。帳號與 Email 不提供編輯，顯示名稱與電話號碼由使用者本人在 `/settings` 維護。
+- `/users` 只允許具有 `accounts.read` 的帳號進入，提供帳號／名稱／Email 搜尋與角色篩選。Bootstrap Admin 不出現在清單；具備角色與狀態管理 Functions 的 Admin 可直接使用每列下拉選單與開關，透過原子 administration endpoint 更新。
+- `/users/{id}` 顯示帳號、顯示名稱、電話號碼、Email 與驗證狀態；Admin 可在詳情表單調整單一系統角色與帳號啟用狀態。帳號與 Email 不提供編輯，顯示名稱與電話號碼由使用者本人在 `/settings` 維護。
 - Project Role 由 Project Detail 的成員管理區調整，不在個人設定或使用者詳情畫面修改。
+- Project Detail 的新增成員控制使用可搜尋下拉選單，依帳號或姓名篩選 member-candidate API 已回傳的候選人；Bootstrap Admin、已加入成員及不符合後端資格者不得成為有效候選人。
 - Task Detail 為唯讀詳情與留言畫面。具備 Task 修改權限的使用者按下「編輯」後，導向 `/admin/projects/{projectId}/task-items/{taskId}/edit` 表單；不在詳情頁內聯編輯 Task 欄位。
+- Task 清單與詳情以 Project Detail 已載入的成員資料把建立者／指派對象 ID 轉成顯示名稱；若該帳號不在目前的專案成員集合中，現行前端會直接顯示 Account GUID。
 
 ## 使用註冊
 1. 透過設定帳號、顯示名稱、E-mail、密碼與確認密碼進行註冊；全部欄位均為必填，顯示名稱 trim 後為 1–100 個字元，確認密碼必須與密碼一致。註冊完成後預設取得 `Viewer` 系統角色
@@ -137,6 +141,20 @@ Task 狀態是所有專案成員共用的工作狀態，不會為每位使用者
 - 實作狀態：
     - 已完成 Hangfire Scanner／Sender、Project 當地日期掃描冪等、SQL reminder 唯一紀錄與原子 claim、寄送前重查、5／15／60 分鐘重試、固定 idempotency key、DB／安全結構化 Log 告警；本期依決議不提供告警管理 UI。
 
+5A. 管理自己的個人資料與偏好
+
+    作為已登入使用者，我想要在個人設定中維護自己的顯示名稱、電話與操作偏好，以便讓系統顯示最新聯絡資訊並保留我的批次操作習慣。
+
+- 個人資料：
+    - `/settings` 讀取 `GET /api/v1/users/me/profile`，並以 `PUT /api/v1/users/me/profile` 只更新本人 `name` 與 `phoneNumber`。
+    - 顯示名稱必填，trim 後 1–100 字；電話可空白，非空白時 trim 後最多 30 字並符合電話格式。空白電話保存為 `null`。
+    - 更新成功後，側邊導覽的顯示名稱立即同步；電話異動會將 `PhoneNumberConfirmed` 重設為 false。
+    - `Viewer` 與 Email 尚未驗證帳號仍可維護自己的名稱與電話，但不能藉此修改帳號、Email、角色、啟用狀態或業務資料。
+
+- 操作偏好：
+    - 介面語言保存在瀏覽器 `localStorage`。
+    - 批次確認偏好由後端按帳號保存；沒有 `preferences.update-own` 的角色只能查看，不能儲存。
+
 ### 後台管理員
 
 6. 新增 Task Item
@@ -172,3 +190,19 @@ Task 狀態是所有專案成員共用的工作狀態，不會為每位使用者
 
 - 確認後行為：
   - 點擊「確定」後送出軟刪除請求。成功時返回 Task 清單並顯示成功訊息；失敗時保留原畫面並顯示錯誤訊息。已刪除的 Task、相關留言與稽核紀錄仍會保留。
+
+9. 管理使用者角色與帳號狀態
+
+作為 Admin，我想要在使用者清單或詳情中調整角色與啟用狀態，以便管理系統存取權限。
+
+- `/users` 的角色下拉選單與狀態開關每次只改一個面向，但都送到 `PUT /api/v1/users/{id}/administration`，由後端以目前另一欄值組成單一原子請求。
+- `/users/{id}` 提供同一 endpoint 的完整表單；兩個入口都必須遵守未驗證帳號不得提升為非 Viewer、最後一位有效 Admin 不得被移除、Bootstrap Admin 不可異動等規則。
+- 成功時只遞增一次 TokenVersion、撤銷所有 Refresh Token，並寫入完整 AuditLog；失敗時角色、狀態與 Session 均不得部分更新。
+
+10. 管理 Project 成員
+
+作為可管理專案的 Admin、Administrator 或 ProjectManager，我想要搜尋候選帳號並指定一個或多個 Project Role，以便維護專案團隊。
+
+- Project Detail 載入 member-candidate API 與 Project Roles；可搜尋下拉選單依帳號或姓名即時篩選目前候選資料。
+- 新增與角色修改都必須保留至少一個 Project Role；修改採完整取代。
+- 後端在交易內再次檢查專案管理權限、帳號有效性、Bootstrap Admin、重複成員與 Owner／未完成 Task 移除限制。

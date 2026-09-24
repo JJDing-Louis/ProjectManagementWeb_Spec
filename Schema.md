@@ -2,10 +2,10 @@
 
 ## 版本與真相來源
 
-本文是依目前 Backend `ApplicationDbContext`、EF Core migrations 與 model snapshot 整理的規格摘要。可實際部署的 Database Schema 以下列檔案為唯一版本來源：
+本文於 2026-09-24 依目前 Backend `ApplicationDbContext`、EF Core migrations 與 model snapshot 重新核對。可實際部署的 Database Schema 以下列檔案為唯一版本來源：
 
-- `ProjectManagementWeb_BackEnd/src/ProjectManagementWeb.Infrastructure/Persistence/Migrations/`
-- `ProjectManagementWeb_BackEnd/src/ProjectManagementWeb.Infrastructure/Persistence/Migrations/ApplicationDbContextModelSnapshot.cs`
+- `ProjectManagementWeb_Backend/src/ProjectManagementWeb.Infrastructure/Persistence/Migrations/`
+- `ProjectManagementWeb_Backend/src/ProjectManagementWeb.Infrastructure/Persistence/Migrations/ApplicationDbContextModelSnapshot.cs`
 
 Backend `docs/TableSchema.md` 提供完整欄位、Index 與 Foreign Key 對照。Schema 變更必須修改 EF mapping、產生 migration，並回頭同步本文與 `docs/TableSchema.md`。
 
@@ -60,7 +60,10 @@ erDiagram
 - `Email nvarchar(256)`；`NormalizedEmail nvarchar(256)` NOT NULL，使用無 filter UNIQUE index 保證 Email 唯一。
 - `PasswordHash nvarchar(max)` 由 ASP.NET Core Identity 維護。
 - `Name nvarchar(100)`、`Remark nvarchar(500)`、`EmailConfirmed bit`、`IsEnabled bit`、`TokenVersion int`。
+- `PhoneNumber nvarchar(max)` 與 `PhoneNumberConfirmed bit` 沿用 ASP.NET Core Identity 欄位。Application contract 將電話限制為 trim 後最多 30 字且須符合電話格式；空白正規化為 `NULL`，電話異動後將 `PhoneNumberConfirmed` 重設為 false。這個 30 字限制目前是應用層規則，尚未縮小資料庫欄位型別。
 - Identity 其他欄位包含 SecurityStamp、ConcurrencyStamp、Lockout 與 AccessFailedCount。
+- `GET/PUT /users/me/profile` 只允許目前登入者讀寫自己的 `Name` 與 `PhoneNumber`；成功更新會寫 AuditLog，但只記錄異動欄位名稱，不保存名稱或電話內容。
+- Bootstrap Admin 由 `BootstrapAdmin:Account` 設定辨識，不是另一張資料表或靜態 seed row。使用者清單及 Project member candidates 會在 Application 查詢層排除該帳號；直接異動仍由後端規則拒絕。
 
 ### Roles、AccountRoles、Functions、RoleFunctions
 
@@ -95,7 +98,7 @@ erDiagram
 
 - `TimeZoneId` 已由 `AddProjectTimeZone` migration 新增。新 Project 必須明確提供；既有資料由部署必填的 `PMW_MIGRATION_DEFAULT_TIME_ZONE_ID` 回填，設定缺少或無效時 migration fail-fast。
 - `DeletedByAccountId` 已由 `AddProjectSoftDeleteActor` migration 新增；Project 軟刪除不 cascade 實體刪除成員、Task、Comment 或 history。
-- `OwnerAccountId` 的 FK 只能保證帳號存在；Owner 必須已啟用、Email 已驗證且系統角色恰為 `Administrator` 的規則，由 Application use case 在建立與修改時驗證。修改時，新 Owner 另須已是該 Project 成員。
+- `OwnerAccountId` 的 FK 只能保證帳號存在；Owner 必須已啟用、Email 已驗證且系統角色恰為 `Administrator` 的規則，由 Application use case 在建立與修改時驗證。建立時 Owner membership 與 `ProjectManager` mapping 會在同一交易建立；修改時，新 Owner 另須已是該 Project 成員，缺少 `ProjectManager` 時由同一交易補上。舊 Owner 的 Project Role mappings 不會自動刪除。
 
 ### ProjectMembers、ProjectRoles、ProjectMemberRoles
 
@@ -175,4 +178,5 @@ erDiagram
 ## 本輪資料完整性狀態
 
 - `Accounts.NormalizedEmail` 的 NOT NULL／UNIQUE、`RefreshTokens.ReplacedByTokenId` self-FK，以及 Task 到期提醒的唯一性、claim、retry、取消與告警狀態均已由 migration 落地。
+- 本人名稱與電話功能沿用既有 `Accounts.Name` 與 Identity `PhoneNumber`，因此沒有新增 migration；目前 30 字電話上限只由 Application 與 Frontend 驗證。若未來需要 DB 層長度保護，須另建 migration 將 `PhoneNumber` 縮為 `nvarchar(30)`，並先檢查既有資料。
 - 真實 SQL Server 回歸已驗證髒資料 fail-fast、FK delete behavior、唯一限制與多 worker concurrency；後續 Schema 異動仍須同步 EF mapping、migration、model snapshot 與本文件。

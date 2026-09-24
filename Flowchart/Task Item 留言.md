@@ -1,5 +1,7 @@
 # Task Item 留言
 
+> 實作同步：2026-09-24。對應 `/api/v1/projects/{projectId}/task-items/{taskId}/comments` 的 GET／POST／PUT／DELETE；修改與刪除都必須傳目前 `rowVersion`。
+
 ```mermaid
 flowchart TB
     commentStart([Task Item Detail]) --> commentAction{選擇操作}

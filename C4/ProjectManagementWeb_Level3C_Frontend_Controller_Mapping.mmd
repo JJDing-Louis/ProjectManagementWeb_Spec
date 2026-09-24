@@ -3,20 +3,20 @@ C4Component
 
     Container_Boundary(webBoundary, "前端網站（Vue 3 SPA）") {
         Component(authViews, "帳號與驗證畫面", "Vue Views", "SignInView、SignUpView、VerifyEmailView、ResendVerificationView")
-        Component(userViews, "使用者與偏好畫面", "Vue Views", "UserList、UserDetail、Settings")
-        Component(projectViews, "專案管理畫面", "Vue Views", "ProjectList、ProjectDetail、ProjectForm")
+        Component(userViews, "使用者、個人資料與偏好畫面", "Vue Views", "UserList、UserDetail、Settings")
+        Component(projectViews, "專案管理畫面", "Vue Views", "ProjectList、ProjectDetail、ProjectForm、SearchableSelectDropdown")
         Component(taskViews, "Task 與留言畫面", "Vue Views", "TaskList、TaskDetail、TaskForm")
     }
 
     Container_Boundary(apiBoundary, "後端 API（ASP.NET Core Web API）") {
         Component(authController, "AuthController / SecurityController", "Controllers", "帳號、Session、Token、Email 驗證與 CSRF token")
-        Component(userControllers, "UsersController / RolesController", "Controllers", "使用者、系統角色與個人偏好")
+        Component(userControllers, "UsersController / RolesController", "Controllers", "使用者清單與詳情、本人 Profile、系統角色、帳號狀態與個人偏好")
         Component(projectControllers, "ProjectsController", "Controller", "專案、Owner、成員與專案角色")
         Component(taskControllers, "TaskItemsController / CommentsController", "Controllers", "Task、批次狀態、軟刪除與留言")
     }
 
     Rel(authViews, authController, "註冊、登入、驗證與登出 API", "JSON/HTTPS")
-    Rel(userViews, userControllers, "使用者查詢、角色與偏好 API", "JSON/HTTPS")
+    Rel(userViews, userControllers, "使用者查詢、本人 Profile、角色、狀態與偏好 API", "JSON/HTTPS")
     Rel(projectViews, projectControllers, "專案與成員管理 API", "JSON/HTTPS")
     Rel(taskViews, taskControllers, "Task、批次狀態與留言 API", "JSON/HTTPS")
 

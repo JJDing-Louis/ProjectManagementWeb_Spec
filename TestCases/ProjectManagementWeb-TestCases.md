@@ -2,7 +2,7 @@
 
 ## 1. 文件資訊
 
-- **產出日期**：2026-09-07；**最後更新**：2026-09-17
+- **產出日期**：2026-09-07；**最後更新**：2026-09-24
 - **需求來源**：`UserStory.md`、`Flowchart/`、`Schema.md`、`StaticData.md`、`UIMock/`、Backend API／EF Core migrations／現有測試、Frontend routes／views／services／現有測試
 - **測試範圍**：帳號與驗證、授權與 Session、使用者管理、偏好、專案與成員、Task 清單與異動、留言、到期提醒、SQL 完整性、UI／E2E
 - **案例狀態定義**：`Ready` 只表示案例已有可測介面與明確預期；`Planned` 表示需求已定義但功能尚未實作，或因契約缺口尚不能執行。`Ready` 本身不等於測試已通過。
@@ -17,10 +17,10 @@
 | ✅ 已實測通過 | 118 | §5 實測覆蓋矩陣、§8.1 最終全量回歸 |
 | 🟡 部分實測 | 0 | 無 |
 | ⚪ 尚未實測 | 0 | 無 |
-| Backend 最後完整回歸 | 2026-09-16 20:47:27 +08:00 | Unit 61／61、Integration 98／98；Failed 0、Skipped 0 |
-| Frontend 最後完整回歸 | 2026-09-16 20:47:27 +08:00 批次 | Vitest 75／75，type-check、ESLint、Prettier、production build 全部通過 |
-| E2E 最後完整回歸 | 2026-09-16 20:44:21 +08:00 | Playwright desktop／mobile 22／22；Failed 0、Skipped 0 |
-| 獨立測試日誌 | 2026-09-16 | `TestLogs/2026-09-16-第一次TDD測試日誌.md` |
+| Backend 最後完整回歸 | 2026-09-21 02:51:02 +08:00 | Unit 61／61、Integration 101／101；Failed 0、Skipped 0 |
+| Frontend 最後完整回歸 | 2026-09-21 02:51:02 +08:00 | Vitest 79／79，type-check、ESLint、Prettier、production build 全部通過 |
+| E2E 最後完整回歸 | 2026-09-21 02:51:02 +08:00 | Playwright desktop／mobile 26／26；Failed 0、Skipped 0 |
+| 獨立測試日誌 | 2026-09-16、2026-09-24 | `TestLogs/2026-09-16-第一次TDD測試日誌.md`、`TestLogs/2026-09-24-規格同步與UI擷取日誌.md` |
 
 閱讀個別案例時，先看 `狀態` 判斷案例是否可執行，再看「現有自動化覆蓋」確認對應測試程式；是否真的執行通過，則以 §5 的 `實測狀態` 及 §8 的時間戳紀錄為準。歷史紀錄中出現的失敗或 Skip 是修正前過程，不能覆蓋 §8.1 的最終結果。
 
@@ -38,7 +38,7 @@
 | CON-006 | 批次目標狀態初始值 | User Story 要求先選狀態，UI 預設 `InProgress` | 保留 `InProgress` 預設值；只在未選 Task 時停用確認 | 已更新 User Story、Flowchart 與 UI 草圖契約 |
 | CON-007 | Project 表單限制 | Frontend 與 Backend／DB 不一致 | Name trim 後 1–200 字；Description 選填且最多 4000 字 | Frontend、Backend 與 DB 欄位限制已對齊並通過測試 |
 | CON-008 | Task Description 必填 | Frontend 必填，Backend／DB 允許空值 | Description 選填；有值時 trim 後最多 8000 字 | 前後端與 Backend 整合測試均已對齊 |
-| CON-009 | 使用者設定範圍 | 舊草圖將個資、系統角色與專案角色放在同頁 | Settings 只管理語言與批次確認偏好；系統角色／啟用狀態在 User Detail；Project Roles 在 Project Detail | 已更新 User Story、C4 與 UI 草圖契約 |
+| CON-009 | 使用者設定範圍 | 舊草圖將個資、系統角色與專案角色放在同頁 | Settings 管理本人名稱／電話、語言與批次確認偏好；系統角色／啟用狀態在 User List 內聯操作或 User Detail 表單；Project Roles 在 Project Detail | 已更新 User Story、Flowchart、C4 與實際 UI Mock |
 | CON-010 | Schema 主鍵與資料模型 | 舊 Schema 為字串主鍵與明文式 Password | 以 EF migrations／model snapshot 為正式來源，使用 Identity GUID、`PasswordHash`、獨立關聯與 rowversion | `Schema.md` 已依現行模型改寫 |
 | CON-011 | C4 Email 範圍 | C4 只繪出驗證信 | 到期提醒需包含 Scanner、Sender、唯一寄送紀錄、retry 與告警 | User Story、提醒 Flowchart、Backlog、彙整版與五張獨立 C4 圖已依現行 Hangfire／SQL Server／SMTP 實作對齊 |
 | CON-012 | Project 清單搜尋方式 | 舊草圖為多欄位查詢與 Owner 篩選 | 單一 search 查 Code／Name／Description，另有 status；無 Owner filter | 已更新 User Story 與 UI 草圖契約 |
@@ -60,8 +60,8 @@
 | GAP-010 | `Accounts.NormalizedEmail` 改為 DB `NOT NULL`，並建立不帶 filter 的 UNIQUE index；重複時 API 回 `409 duplicate_email` 且包含 `errors.email`。Migration 發現 NULL／重複髒資料時 fail-fast，由人工修正後重跑，不自動合併或刪除帳號。 | 增加 migration 前置檢查，再調整 nullability 與 UNIQUE index；捕捉並行 UNIQUE 違規並映射固定 Problem Details。 | 大小寫正規化、並行註冊、NULL、髒資料 fail-fast、人工修正後重跑與固定 409 契約。 | 已完成並通過 API／SQL／migration 自動化測試 |
 | GAP-011 | `RefreshTokens.ReplacedByTokenId` 補上 nullable self-referencing Foreign Key，並設定 `.OnDelete(DeleteBehavior.NoAction)`。 | 補 EF mapping 與 migration；正常生命週期只撤銷 Token，不實體刪除；歷史清理由獨立 retention 流程處理。 | 不存在的 replacement ID 被 DB 拒絕；合法 rotation chain 可保存；被參照 Token 不得因 cascade 消失。 | 已完成並通過 EF model／SQL 自動化測試 |
 | GAP-012 | Task 到期提醒依 Project 必填的 IANA `TimeZoneId`，每天 Project 當地時間 08:00 執行；同一 Project 當地日期只執行一次，當日服務恢復即補跑。初次失敗後最多重試 3 次，間隔 5、15、60 分鐘；最終告警寫 DB 與結構化 log，本期不做管理 UI。 | Project 補 `TimeZoneId`；既有資料由部署必填的 migration 預設 IANA timezone 回填，新 Project 必須明確指定；實作 Scanner、Sender、claim、retry、告警與測試。 | 多時區 08:00、DST 日期冪等、當日補跑、3 次重試、DB／log 告警、去重、多 worker、Task 完成與帳號失效。 | 已完成並通過 Hangfire／Service／SQL／Log 自動化與隔離部署啟動測試 |
-| GAP-013 | Backend 核心 Service/API 授權、交易與並行路徑必須補自動化測試。 | 優先補角色矩陣、批次 rollback、rowversion、Owner、成員角色、token rotation、軟刪除及 audit/history。 | 使用實際 SQL Server 驗證 relational constraint、transaction 與 concurrency；不得以 EF InMemory 取代。 | 已完成並通過 Unit 61／Integration 98 自動化測試 |
-| GAP-014 | Frontend 必須補 Task 清單、批次、留言、角色與主要錯誤流程的 Component／E2E 測試。 | 補 URL query／返回狀態、checkbox、10 筆上限、偏好、留言、角色複選及 403/409/422 UX。 | Vitest 驗證元件行為；Playwright 驗證前後端整合，不只檢查元素存在。 | 已完成並通過 Vitest 75／隔離 Playwright 22 自動化測試 |
+| GAP-013 | Backend 核心 Service/API 授權、交易與並行路徑必須補自動化測試。 | 優先補角色矩陣、批次 rollback、rowversion、Owner、成員角色、token rotation、軟刪除及 audit/history。 | 使用實際 SQL Server 驗證 relational constraint、transaction 與 concurrency；不得以 EF InMemory 取代。 | 已完成；目前基線 Unit 61／Integration 101 |
+| GAP-014 | Frontend 必須補 Task 清單、批次、留言、角色與主要錯誤流程的 Component／E2E 測試。 | 補 URL query／返回狀態、checkbox、10 筆上限、偏好、留言、角色複選及 403/409/422 UX。 | Vitest 驗證元件行為；Playwright 驗證前後端整合，不只檢查元素存在。 | 已完成；目前基線 Vitest 79／隔離 Playwright 26 |
 | GAP-015 | Frontend `AGENTS.md` 必須更新為目前已完成 Vue 3 初始化且已串接 Backend 的現況。 | 移除「尚未建立前端專案」敘述，保留現行 Vue 3、TypeScript、Vite、Pinia、Router、Vitest 與 Playwright 規範。 | 文件敘述與 `package.json`、目錄、route、service 及測試工具一致。 | 已完成 |
 
 ### 2.3 已確認的 OPEN 決議
@@ -106,6 +106,7 @@
 | FLOW-PRJ | 建立／修改 Project |
 | FLOW-MEMBER | 管理 Project Member 與 Project Role |
 | FLOW-USER | 管理系統角色與帳號狀態 |
+| PROFILE | 管理本人顯示名稱與電話號碼 |
 | PREF | 個人批次確認偏好 |
 | API | `/api/v1`、Problem Details、OpenAPI、CSRF/JWT 契約 |
 | DB | 正式 EF Core migrations／model snapshot |
@@ -320,10 +321,10 @@
 - **類型與優先級**：Functional／P1；**測試層級**：API、UI；**狀態**：Ready
 - **對應需求**：FLOW-USER；API Users
 - **前置條件**：Admin；多角色、多頁使用者資料。
-- **測試步驟**：依帳號、姓名、Email 模糊搜尋；依四種角色篩選；切換頁次。
-- **預期結果**：只回符合資料，按帳號排序；page<1 校正 1，pageSize 限制 1–100；空結果顯示空狀態。
+- **測試步驟**：依帳號、姓名、Email 模糊搜尋；依四種角色篩選；切換頁次；確認 Bootstrap Admin 不在 API／UI 清單；檢查具管理權限者的每列角色下拉選單與帳號狀態開關。
+- **預期結果**：只回符合資料且排除 Bootstrap Admin，按帳號排序；page<1 校正 1，pageSize 限制 1–100；空結果顯示空狀態；具管理 Functions 者可內聯操作，其他角色只能查看。
 - **資料後置狀態**：不變。
-- **現有自動化覆蓋**：完整：`UserApiTests.Admin查詢使用者應正確套用搜尋角色排序與分頁` 已於 2026-09-13 以真實 SQL Server通過 API 契約；`bootstrapAdminProtection.spec.ts` 已於 2026-09-15 通過清單分頁、搜尋與角色篩選交集、查詢參數及錯誤狀態。
+- **現有自動化覆蓋**：完整：`UserApiTests.Admin查詢使用者應正確套用搜尋角色排序與分頁` 及 Bootstrap Admin 排除測試已以真實 SQL Server 通過；`bootstrapAdminProtection.spec.ts` 覆蓋清單分頁、搜尋與角色篩選交集、內聯角色／狀態操作、Bootstrap 保護及錯誤復原。
 
 #### TC-ERR-USER-002 未具 accounts.read 禁止讀取他人資料
 - **類型與優先級**：Security／P0；**測試層級**：API、UI；**狀態**：Ready
@@ -338,10 +339,10 @@
 - **類型與優先級**：State／P0；**測試層級**：Service、API、SQL、UI；**狀態**：Ready
 - **對應需求**：FLOW-USER；`PUT /users/{id}/administration`
 - **前置條件**：Admin、已驗證目標帳號、目標有有效 refresh tokens。
-- **測試步驟**：同一 request 變更 role 與 isEnabled；檢查 AccountRoles、TokenVersion、RefreshTokens、AuditLogs。
+- **測試步驟**：1. 由 `/users` 清單分別變更角色下拉選單與狀態開關。2. 由 `/users/{id}` 表單同時變更 role 與 isEnabled。3. 檢查 AccountRoles、TokenVersion、RefreshTokens、AuditLogs。
 - **預期結果**：單一交易全成或全敗；角色以取代方式更新；TokenVersion 只加 1；全部 refresh token 撤銷；稽核含操作者及前後值。
 - **資料後置狀態**：目標帳號只有一個系統角色且 session 失效。
-- **現有自動化覆蓋**：完整：`UserApiTests.Admin原子更新角色與啟用狀態應只增加一次TokenVersion並撤銷Session` 已於 2026-09-13 以真實 SQL Server通過 API／SQL；`bootstrapAdminProtection.spec.ts` 已於 2026-09-15 驗證單一表單送出角色與啟用狀態，且 Account／Name／Email 唯讀。
+- **現有自動化覆蓋**：完整：`UserApiTests.Admin原子更新角色與啟用狀態應只增加一次TokenVersion並撤銷Session` 已以真實 SQL Server 通過 API／SQL；`bootstrapAdminProtection.spec.ts` 驗證 User List 內聯角色／狀態更新及 User Detail 完整表單，並確認 Account／Name／Phone／Email 不屬於管理 request。
 
 #### TC-ERR-USER-004 未驗證帳號不得提升角色
 - **類型與優先級**：Security／P0；**測試層級**：API、SQL、UI；**狀態**：Ready
@@ -381,7 +382,7 @@
 
 #### TC-F-USER-008 使用者維護自己的名稱與電話號碼
 - **類型與優先級**：Functional／P1；**測試層級**：UI、API、SQL；**狀態**：Ready
-- **對應需求**：User Story「畫面與查詢契約」；CON-009
+- **對應需求**：PROFILE；User Story「畫面與查詢契約」；CON-009
 - **前置條件**：任一已登入帳號，包含 `Viewer` 與 Email 尚未驗證帳號。
 - **測試步驟**：1. 開啟 `/settings`。2. 讀取 `GET /users/me/profile`。3. 修改名稱與電話後送出 `PUT /users/me/profile`。4. 以空白電話清除。5. 嘗試空白／超長名稱、無效／超長電話。6. 檢查其他帳號、OpenAPI 與 audit。
 - **預期結果**：只能更新目前登入者；名稱與電話會 trim 並持久化，空白電話儲存為 null，畫面導覽名稱立即同步；無效輸入回 400 `validation_error` 與欄位錯誤且資料不變；request 不包含帳號、Email、角色或啟用狀態；audit 只記錄異動欄位名稱，不保存個資內容。
@@ -476,7 +477,7 @@
 - **對應需求**：FLOW-PRJ；optimistic concurrency
 - **前置條件**：可管理 Project，持有最新 rowVersion；新 Owner 是已啟用、Email 已驗證、system role=Administrator 的既有 Project 成員。
 - **測試步驟**：更新名稱、說明、Owner、status、TimeZoneId；重新讀取。
-- **預期結果**：200；基本資料更新；VersionNumber 加 1；回傳新 rowVersion；稽核含前後資料；成員／Task 異動不增加 VersionNumber。
+- **預期結果**：200；基本資料更新；VersionNumber 加 1；回傳新 rowVersion；新 Owner 缺少 `ProjectManager` 時於同一交易補上，舊 Owner 原有角色不移除；稽核含前後資料；成員／Task 異動不增加 VersionNumber。
 - **資料後置狀態**：保存新資料與版本。
 - **現有自動化覆蓋**：完整：`ProjectApiTests` 已驗證 Owner 啟用／Email 驗證／Administrator／成員資格、TimeZoneId 修改與持久化、status、VersionNumber、rowVersion 與 audit；`projectFormView.spec.ts` 驗證編輯載入、時區預載／修改、衝突及成功導向。
 
@@ -1163,7 +1164,7 @@
 - **測試步驟**：Tab 全流程；操作表單、checkbox、dialog、multi-select、mobile navigation；觸發錯誤與 toast。
 - **預期結果**：可見 focus；label/aria-name 正確；錯誤具 alert、toast 具 status；顏色不是唯一狀態提示；Esc 可關閉 multi-select。
 - **資料後置狀態**：依操作一致。
-- **現有自動化覆蓋**：完整：`multiSelectDropdown.spec.ts` 檢查 ARIA 結構；`app.spec.ts` 以真實瀏覽器驗證 Tab 與可見 focus、label／aria-name、mobile navigation 鍵盤開啟、checkbox、confirm dialog、multi-select Enter／Esc、錯誤 alert、成功 toast status 與文字狀態 badge。測試期間發現關閉 drawer 仍可 Tab 進入，已修正後完整隔離 E2E 22／22 通過。
+- **現有自動化覆蓋**：完整：`multiSelectDropdown.spec.ts` 與 `SearchableSelectDropdown` 測試檢查 ARIA 結構；`app.spec.ts` 以真實瀏覽器驗證 Tab 與可見 focus、label／aria-name、mobile navigation 鍵盤開啟、checkbox、confirm dialog、多選／可搜尋下拉選單、錯誤 alert、成功 toast status 與文字狀態 badge。2026-09-21 完整隔離 E2E 26／26 通過。
 
 #### TC-F-UI-006 語言切換與持久化
 - **類型與優先級**：State／P2；**測試層級**：UI、E2E；**狀態**：Ready
@@ -1207,21 +1208,22 @@
 | US-8 | TC-F-TASK-019、TC-ST-TASK-020、TC-SQL-003 | ✓ | ✓ | ✓ | ✅ 已實測通過 | Backend／Frontend 2026-09-16 20:47:27 |
 | FLOW-PRJ | PRJ 系列 001–011 | ✓ | ✓ | ✓ | ✅ 已實測通過 | Backend／Frontend 2026-09-16 20:47:27；E2E 20:44:21 |
 | FLOW-MEMBER | MEMBER 系列 001–009 | ✓ | ✓ | ✓ | ✅ 已實測通過 | Backend／Frontend 2026-09-16 20:47:27 |
-| FLOW-USER | USER 系列 001–010 | ✓ | ✓ | ✓ | ✅ 已實測通過 | Backend／Frontend 2026-09-16 20:47:27；E2E 20:44:21 |
-| PREF | PREF 系列 001–002 | ✓ | ✓ | ✓ | ✅ 已實測通過 | Frontend 2026-09-16 20:47:27；E2E 20:44:21 |
+| FLOW-USER | USER 系列 001–010 | ✓ | ✓ | ✓ | ✅ 已實測通過 | Backend／Frontend／E2E 2026-09-21 02:51:02 |
+| PROFILE | TC-F-USER-008～009 | ✓ | ✓ | ✓ | ✅ 已實測通過 | Backend／Frontend／E2E 2026-09-21 02:51:02 |
+| PREF | PREF 系列 001–002 | ✓ | ✓ | ✓ | ✅ 已實測通過 | Frontend／E2E 2026-09-21 02:51:02 |
 | API／DB | SQL 系列 001–008、API 系列 001–005 | ✓ | ✓ | ✓ | ✅ 已實測通過 | 實際 SQL Server 2026-09-16 20:47:27 |
-| UI／UIMock | UI 系列 001–008 | ✓ | ✓ | ✓ | ✅ 已實測通過 | Vitest 2026-09-16 20:47:27；E2E 20:44:21 |
+| UI／UIMock | UI 系列 001–008 | ✓ | ✓ | ✓ | ✅ 已實測通過 | 全量 E2E 2026-09-21；實際 UI 擷取 2026-09-24 |
 
 ## 6. 自動化實證摘要
 
 | 測試層級 | 實際驗證內容 | 最後結果 | 最後時間 |
 |---|---|---|---|
 | Backend Unit | 註冊邊界、Domain 狀態與版本、Token entity、EF model metadata、SMTP options | ✅ Passed 61、Failed 0、Skipped 0 | 2026-09-16 20:47:27 +08:00 |
-| Backend Integration | Auth、User、Project、Member、Task、Comment、Reminder、OpenAPI、Problem Details、交易、併發、稽核 | ✅ Passed 98、Failed 0、Skipped 0 | 2026-09-16 20:47:27 +08:00 |
-| 實際 SQL Server | migration、constraint、rowversion、FK、transaction rollback、原子 claim 與資料後置狀態 | ✅ 已包含於 Integration 98／98 | 2026-09-16 20:47:27 +08:00 |
-| Frontend Vitest | HTTP client、Router、表單、清單、詳情、錯誤復原、loading／empty／success／error、ARIA 結構 | ✅ Passed 75、Failed 0、Skipped 0 | 2026-09-16 20:47:27 批次 |
-| Playwright E2E | 真實 API、desktop／mobile、登入、refresh、偏好、Project／Task、鍵盤、responsive、XSS | ✅ Passed 22、Failed 0、Skipped 0 | 2026-09-16 20:44:21 +08:00 |
-| 靜態品質閘門 | Backend format/build；Frontend type-check/ESLint/Prettier/production build | ✅ 全部通過；Backend 0 warnings／0 errors | 2026-09-16 20:47:27 批次 |
+| Backend Integration | Auth、User／Profile、Project、Member、Task、Comment、Reminder、OpenAPI、Problem Details、交易、併發、稽核 | ✅ Passed 101、Failed 0、Skipped 0 | 2026-09-21 02:51:02 +08:00 |
+| 實際 SQL Server | migration、constraint、rowversion、FK、transaction rollback、原子 claim 與資料後置狀態 | ✅ 已包含於 Integration 101／101 | 2026-09-21 02:51:02 +08:00 |
+| Frontend Vitest | HTTP client、Router、Profile／偏好、表單、清單內聯管理、詳情、錯誤復原與 ARIA 結構 | ✅ Passed 79、Failed 0、Skipped 0 | 2026-09-21 02:51:02 +08:00 |
+| Playwright E2E | 真實 API、desktop／mobile、登入、refresh、Profile、偏好、Project／Task、鍵盤、responsive、XSS | ✅ Passed 26、Failed 0、Skipped 0 | 2026-09-21 02:51:02 +08:00 |
+| 靜態品質閘門 | Backend format/build；Frontend type-check/ESLint/Prettier/production build | ✅ 全部通過；Backend 0 warnings／0 errors | 2026-09-21 02:51:02 +08:00 |
 
 後續不是再補「尚未自動化」案例，而是維持上述完整回歸：任何功能異動都必須重跑受影響案例與必要的全量測試，並更新 §8.1 的時間戳與結果。
 
@@ -1241,7 +1243,7 @@
 
 | 執行時間 | 測試套件／環境 | 最終結果 | 判定 |
 |---|---|---|---|
-| 2026-09-16 20:47:27 +08:00 | Backend Unit | Passed 61、Failed 0、Skipped 0 | ✅ 可作為目前通過證據 |
+| 2026-09-21 02:51:02 +08:00 | Backend Unit | Passed 61、Failed 0、Skipped 0 | ✅ 可作為目前通過證據 |
 | 2026-09-21 02:51:02 +08:00 | Backend Integration／實際隔離 SQL Server | Passed 101、Failed 0、Skipped 0 | ✅ 可作為目前通過證據 |
 | 2026-09-21 02:51:02 +08:00 | Frontend Vitest | Passed 79、Failed 0、Skipped 0 | ✅ 可作為目前通過證據 |
 | 2026-09-21 02:51:02 +08:00 | Playwright desktop／mobile／全新 SQL volume | Passed 26、Failed 0、Skipped 0 | ✅ 可作為目前通過證據 |
@@ -1292,11 +1294,12 @@
 - **SQL FK 刪除行為與 JWT 稽核來源**：2026-09-16 15:47:48（Asia/Taipei，UTC+08:00），新增 TC-SQL-004 真實 SQL Server 合併測試，並將 TC-SQL-006 actor／快照 assertions 合併進既有 Project、Member、Task、Comment、User 異動案例。首次稽核目標測試因 JSON 內中文採 `\uXXXX` escaping 導致 3 個字串 assertion 失敗，改為解析 JSON 欄位後 Passed 9／Failed 0／Skipped 0；完整 Backend 回歸 Unit Passed 61、Integration Passed 90、Failed 0、Skipped 0。
 - **Task 到期提醒、UI 完整矩陣與最終回歸**：2026-09-16 20:47:27（Asia/Taipei，UTC+08:00），完成 Hangfire Scanner／Sender、Project 當地 08:00 與同日補跑、DST 日期冪等、七日視窗、SQL 唯一建立與原子 claim、寄送前重查、5／15／60 分鐘重試、provider idempotency key、DB Failed／AlertedAt 與不含敏感資料的 Warning Log。首次隔離啟動發現低權限 API 帳號不能建立 Hangfire schema，已將 schema 初始化移到 migrator 權限邊界並關閉 runtime 自動建置；首次 UI E2E 亦發現關閉的手機 drawer 仍可進入 Tab 順序，已修正後重測。最終 Backend format、build 0 warnings／0 errors、Unit Passed 61／Failed 0／Skipped 0、Integration Passed 98／Failed 0／Skipped 0；Frontend Vitest Passed 75、type-check、lint、Prettier、production build 全部通過；全新 SQL volume 與即時密碼的隔離 Playwright desktop／mobile Passed 22／Failed 0／Skipped 0，結束後容器與 volume 已清除。118 個案例全部 Ready 且無部分覆蓋。
 - **本人名稱與電話號碼修改**：2026-09-21 02:51:02（Asia/Taipei，UTC+08:00），新增 `GET/PUT /users/me/profile`，沿用既有 Identity `PhoneNumber`，名稱 trim 後必填且最多 100 字、電話可清除且最多 30 字並驗證格式；Viewer 與未驗證帳號也只能修改自己的這兩個欄位。Backend build 0 warnings／0 errors、format 通過、Unit Passed 61／Failed 0／Skipped 0；以獨立 SQL Server 執行 `UserApiTests` Passed 14／Failed 0／Skipped 0，完整 Integration 首輪因未把 migration timezone 與空白 bootstrap account 注入測試 process 而為 Passed 84／Failed 17，修正執行環境後最終 Passed 101／Failed 0／Skipped 0。Frontend Vitest Passed 79／Failed 0／Skipped 0，type-check、lint、Prettier、production build 全部通過；隔離 Playwright 首輪重現 bootstrap Admin 空名稱 fallback 與既有模糊 locator 問題，修正後 desktop／mobile Passed 26／Failed 0／Skipped 0，結束後容器與 volume 已清除。
+- **規格同步與 UI 擷取**：2026-09-24（Asia/Taipei，UTC+08:00），以目前 Backend／Frontend source、EF migrations、routes、services、views 與既有測試證據重新核對全部規格。另以全新 SQL volume、臨時帳密和 Desktop Chrome 實際建立 Project／Task，擷取 16 張 1440×900 UI Mock；文件擷取案例 Passed 1／Failed 0，容器與 volume 已清除。這次執行只驗證畫面擷取路徑，不取代 2026-09-21 的 26 組 desktop／mobile 全量 E2E。
 ### 8.3 歷史基線與不可作為目前完成證據的紀錄
 
-- **Backend 早期批次回歸**：2026-09-13 12:59:30（Asia/Taipei，UTC+08:00）；當時 Unit Passed 58、Integration Passed 24。這是功能尚未補齊前的歷史基線，不取代 §8.1 的 61／98 最終結果。
-- **Frontend 早期 Vitest 基線**：當時 Test Files 11 passed、Tests 24 passed。這是測試擴充前的歷史數字，不取代 §8.1 的 75／75 最終結果。
-- **Frontend Playwright 未設定環境基線**：當時 Passed 0、Failed 0、Skipped 10；因尚未建立隔離 E2E 帳號及注入本機執行密碼，明確不得計為通過。後續已由隔離腳本完成設定，最終結果以 §8.1 的 Passed 22、Failed 0、Skipped 0 為準。
+- **Backend 早期批次回歸**：2026-09-13 12:59:30（Asia/Taipei，UTC+08:00）；當時 Unit Passed 58、Integration Passed 24。這是功能尚未補齊前的歷史基線，不取代 §8.1 的 61／101 最終結果。
+- **Frontend 早期 Vitest 基線**：當時 Test Files 11 passed、Tests 24 passed。這是測試擴充前的歷史數字，不取代 §8.1 的 79／79 最終結果。
+- **Frontend Playwright 未設定環境基線**：當時 Passed 0、Failed 0、Skipped 10；因尚未建立隔離 E2E 帳號及注入本機執行密碼，明確不得計為通過。後續已由隔離腳本完成設定，最終結果以 §8.1 的 Passed 26、Failed 0、Skipped 0 為準。
 
 ### 8.4 目前完成狀態
 

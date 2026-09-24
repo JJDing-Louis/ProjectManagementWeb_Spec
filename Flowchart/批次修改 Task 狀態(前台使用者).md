@@ -1,5 +1,7 @@
 # 批次修改 Task 狀態（前台使用者）
 
+> 實作同步：2026-09-24。對應 `PATCH /api/v1/projects/{projectId}/task-items/batch-status`；每筆 payload 包含 Task ID 與目前 `rowVersion`，單次最多 10 筆。
+
 ```mermaid
 flowchart TB
     batchStart([Task Item List；目標狀態預設 InProgress]) --> selectEditable[勾選一或多筆可修改的 Task]

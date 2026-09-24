@@ -1,5 +1,7 @@
 ## 從詳細頁修改 Task（前台使用者）
 
+> 實作同步：2026-09-24。Task Detail 本身維持唯讀；被指派者在共用 Task Form route 送出 `PATCH status-and-deadline`，管理者送出完整 `PUT`。
+
 ```mermaid
 flowchart TB
     detailStart([Task Item List]) --> openTask[開啟 Task Item Detail]

@@ -11,7 +11,7 @@ C4Component
         }
 
         Boundary(applicationLayer, "Application / Service Layer", "Application") {
-            Component(identityService, "Identity 與 User Service", "C#", "執行帳號、Session、角色、登入雙維度限流、3 分鐘一次性 Email Token、重寄限流與偏好規則")
+            Component(identityService, "Identity 與 User Service", "C#", "執行帳號、Session、本人名稱電話、角色與狀態原子異動、Bootstrap Admin 保護、登入雙維度限流、3 分鐘一次性 Email Token、重寄限流與偏好規則")
             Component(projectService, "Project Service", "C#", "執行專案、Owner、成員、角色與版本衝突規則")
             Component(taskService, "Task 與 Comment Service", "C#", "執行任意狀態更新、指派、批次交易、軟刪除與留言規則")
             Component(reminderScanner, "Task Reminder Scanner", "Hangfire Recurring Job", "依 Project 當地日期於 08:00 後掃描七日視窗，建立不重複的提醒工作")

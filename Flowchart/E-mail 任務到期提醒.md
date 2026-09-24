@@ -1,5 +1,7 @@
 ## E-mail 任務到期提醒
 
+> 實作同步：2026-09-24。流程對應 Hangfire `ReminderJobs`、`ReminderService`、`ProjectReminderRuns` 與 `TaskReminders`；目前沒有提醒管理 UI。
+
 這個功能分成「找出需要提醒的 Task」與「寄送單封提醒信」兩段。兩段分開後，即使 Email 服務暫時失敗，也不必重新掃描全部 Task。
 
 ### 掃描到期任務
