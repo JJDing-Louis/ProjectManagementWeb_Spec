@@ -15,8 +15,6 @@
 
 `main`、`develop` 只接受 PR，不直接 push 或 force push。`feature`／`bugfix` 合併至 `develop`，`release`／`hotfix` 合併至 `main`，都必須使用 PR；`release`／`hotfix` 回合併 `develop` 也使用 PR。PR 合併後才更新目標分支，不改寫既有 history，也不以刪除舊分支作為導入條件。
 
-導入狀態（2026-09-27）：Spec 既有遠端只有 `main`；導入時先從 `main` 建立 `develop`，經 repository 維護者確認後發布並設定保護規則。在遠端 `develop` 尚未建立前，不能對它開 PR。每次工作都重新確認實際 branch 與 remote 狀態。
-
 ## Branch Naming
 
 | 類型             | 格式                                | 範例                        |
