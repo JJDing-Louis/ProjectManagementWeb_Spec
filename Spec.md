@@ -1,5 +1,7 @@
 # 開發規格
 
+Git 分支、Commit、PR、Release 與 AI Agent 作業規則請參閱 [GitFlow 開發與發版規範](docs/git-flow.md)。
+
 本索引依 2026-09-24 的目前實作整理。規格判讀順序以 `UserStory.md`、相關 Flowchart、C4、Schema 與 StaticData 為主；實際 API／資料庫契約仍需和 Backend source、EF Core migrations 及自動化測試一起核對。
 
 目前程式碼盤點結果為 40 個 `/api/v1` Controller actions 與 26 張 EF Application tables；Frontend routes 包含帳號、專案、Task、使用者、個人設定、403 與 404 畫面。數量只用來協助偵測文件漂移，實際契約仍以 route attributes、request／response contracts 與 migrations 為準。
