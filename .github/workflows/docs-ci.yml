@@ -43,11 +43,19 @@ jobs:
       - name: Install Mermaid CLI
         run: npm install --global @mermaid-js/mermaid-cli@11.12.0
 
+      - name: Configure Puppeteer for GitHub runner
+        shell: bash
+        env:
+          PUPPETEER_CONFIG: ${{ runner.temp }}/puppeteer-config.json
+        run: |
+          printf '%s\n' '{"args":["--no-sandbox"]}' > "$PUPPETEER_CONFIG"
+
       - name: Validate Mermaid sources
         shell: bash
         env:
           EXTRACTED_MERMAID: ${{ runner.temp }}/projectmanagementweb-mermaid
           RENDERED_MERMAID: ${{ runner.temp }}/projectmanagementweb-rendered
+          PUPPETEER_CONFIG: ${{ runner.temp }}/puppeteer-config.json
         run: |
           mkdir -p "$RENDERED_MERMAID"
 
@@ -60,6 +68,7 @@ jobs:
             echo "驗證 Mermaid：$mermaid_file"
 
             mmdc \
+              --puppeteerConfigFile "$PUPPETEER_CONFIG" \
               --input "$mermaid_file" \
               --output "$output_file" \
               --backgroundColor transparent
