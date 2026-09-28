@@ -1,0 +1,90 @@
+name: Spec CI
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+  push:
+    branches:
+      - develop
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spec-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-documents:
+    name: Validate specification documents
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+
+      - name: Check Git whitespace errors
+        run: git diff --check
+
+      - name: Validate Markdown structure and local links
+        env:
+          MERMAID_OUTPUT: ${{ runner.temp }}/projectmanagementweb-mermaid
+        run: python3 scripts/validate_spec_docs.py
+
+      - name: Install Mermaid CLI
+        run: npm install --global @mermaid-js/mermaid-cli@11.12.0
+
+      - name: Validate Mermaid sources
+        shell: bash
+        env:
+          EXTRACTED_MERMAID: ${{ runner.temp }}/projectmanagementweb-mermaid
+          RENDERED_MERMAID: ${{ runner.temp }}/projectmanagementweb-rendered
+        run: |
+          mkdir -p "$RENDERED_MERMAID"
+
+          index=0
+
+          while IFS= read -r -d '' mermaid_file; do
+            index=$((index + 1))
+            output_file="$RENDERED_MERMAID/$(printf '%03d' "$index").svg"
+
+            echo "驗證 Mermaid：$mermaid_file"
+
+            mmdc \
+              --input "$mermaid_file" \
+              --output "$output_file" \
+              --backgroundColor transparent
+          done < <(
+            find C4 "$EXTRACTED_MERMAID" \
+              -type f \
+              -name '*.mmd' \
+              -print0
+          )
+
+          if [ "$index" -eq 0 ]; then
+            echo "找不到 Mermaid 原始檔。" >&2
+            exit 1
+          fi
+
+          echo "已成功驗證 $index 個 Mermaid 圖表。"
+
+      - name: Check common credential patterns
+        shell: bash
+        run: |
+          credential_pattern='BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|gh[pousr]_[A-Za-z0-9_]{20,}|AIza[0-9A-Za-z_-]{30,}'
+
+          if git grep -nE "$credential_pattern"; then
+            echo "偵測到疑似憑證或私鑰內容。" >&2
+            exit 1
+          fi
+
+          echo "未偵測到常見憑證格式。"
