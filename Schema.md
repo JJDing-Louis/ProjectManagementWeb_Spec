@@ -61,8 +61,10 @@ erDiagram
 - `PasswordHash nvarchar(max)` 由 ASP.NET Core Identity 維護。
 - `Name nvarchar(100)`、`Remark nvarchar(500)`、`EmailConfirmed bit`、`IsEnabled bit`、`TokenVersion int`。
 - `PhoneNumber nvarchar(max)` 與 `PhoneNumberConfirmed bit` 沿用 ASP.NET Core Identity 欄位。Application contract 將電話限制為 trim 後最多 30 字且須符合電話格式；空白正規化為 `NULL`，電話異動後將 `PhoneNumberConfirmed` 重設為 false。這個 30 字限制目前是應用層規則，尚未縮小資料庫欄位型別。
+- `AvatarImage varbinary(max) NULL` 只保存經檢查並重新編碼的 1080 × 1080 JPG／PNG 最終圖片；新圖覆寫舊值，未上傳為 `NULL`。不保存原圖、歷史版本、檔案路徑或 Base64。圖片需以獨立、受權限保護的端點讀取，不放入使用者清單 JSON。此欄位與 `Id` 同屬一筆帳號資料，無 Partial Dependency；圖片直接存入 Accounts 會增加 Identity 查詢及 SQL 備份體積，需限制大小並避免不必要的查詢載入。
 - Identity 其他欄位包含 SecurityStamp、ConcurrencyStamp、Lockout 與 AccessFailedCount。
 - `GET/PUT /users/me/profile` 只允許目前登入者讀寫自己的 `Name` 與 `PhoneNumber`；成功更新會寫 AuditLog，但只記錄異動欄位名稱，不保存名稱或電話內容。
+- `PUT /users/me/avatar` 僅允許 Email 已驗證者覆寫本人 `AvatarImage`，不依角色或 Function；`GET /users/{id}/avatar` 僅本人或具 `accounts.read` 者可讀取。上傳成功的 AuditLog 不保存圖片內容。覆寫不提供舊版還原；災難復原須依 SQL Server 備份策略另行規劃。
 - Bootstrap Admin 由 `BootstrapAdmin:Account` 設定辨識，不是另一張資料表或靜態 seed row。使用者清單及 Project member candidates 會在 Application 查詢層排除該帳號；直接異動仍由後端規則拒絕。
 
 ### Roles、AccountRoles、Functions、RoleFunctions

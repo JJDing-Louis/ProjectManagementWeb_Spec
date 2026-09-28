@@ -2,21 +2,25 @@
 
 ## 1. 文件資訊
 
-- **產出日期**：2026-09-07；**最後更新**：2026-09-24
+- **產出日期**：2026-09-07；**最後更新**：2026-09-28
 - **需求來源**：`UserStory.md`、`Flowchart/`、`Schema.md`、`StaticData.md`、`UIMock/`、Backend API／EF Core migrations／現有測試、Frontend routes／views／services／現有測試
 - **測試範圍**：帳號與驗證、授權與 Session、使用者管理、偏好、專案與成員、Task 清單與異動、留言、到期提醒、SQL 完整性、UI／E2E
 - **案例狀態定義**：`Ready` 只表示案例已有可測介面與明確預期；`Planned` 表示需求已定義但功能尚未實作，或因契約缺口尚不能執行。`Ready` 本身不等於測試已通過。
 - **實測標記定義**：`✅ 已實測通過` 表示已有實際執行時間、結果與測試程式證據；`🟡 部分實測` 表示只執行部分層級或路徑；`⚪ 尚未實測` 表示只有案例或測試程式，尚無成功執行證據。
-- **目前驗證結論**：118 個案例全部為 `✅ 已實測通過`；0 個部分實測、0 個尚未實測。最終全量證據請直接查看「§1.1 快速判讀」與「§8.1 當前有效的最終全量回歸」。
+- **目前驗證結論**：原有 118 個案例的歷史完整回歸仍見 §8.1；另新增 8 個大頭貼案例，詳見 [AvatarUpload-TestCases.md](AvatarUpload-TestCases.md)。新案例的實測結果須以本次執行紀錄判斷，不併入 2026-09-21 的歷史全量數字。
 
 ### 1.1 快速判讀：哪些案例已真正執行
 
 | 判讀項目 | 目前結果 | 證據位置 |
 |---|---:|---|
-| 測試案例總數 | 118 | §4 各 `TC-*` 案例 |
-| ✅ 已實測通過 | 118 | §5 實測覆蓋矩陣、§8.1 最終全量回歸 |
-| 🟡 部分實測 | 0 | 無 |
-| ⚪ 尚未實測 | 0 | 無 |
+| 測試案例總數 | 126 | §4 原有 118 個案例與 `AvatarUpload-TestCases.md` 新增 8 個案例 |
+| ✅ 已實測通過 | 118（既有歷史基線） | §5 實測覆蓋矩陣、§8.1 既有功能最終全量回歸 |
+| ✅ 新增案例已實測通過 | 5 | `AvatarUpload-TestCases.md` 本次實測紀錄（001、002、005、006、007） |
+| 🟡 新增案例部分實測 | 3 | `AvatarUpload-TestCases.md` 本次實測紀錄（003、004、008） |
+| ⚪ 新增案例尚未實測 | 0 | `AvatarUpload-TestCases.md` 本次實測紀錄 |
+| Backend 本次完整回歸 | 2026-09-28 02:11 +08:00 | Unit 78／78、隔離 SQL Server Integration 107／107；Failed 0、Skipped 0 |
+| Frontend 本次完整單元回歸 | 2026-09-28 02:11 +08:00 | Vitest 88／88，type-check、ESLint、Prettier、production build 全部通過 |
+| E2E 本次聚焦驗證 | 2026-09-28 02:11 +08:00 | Playwright 大頭貼流程 desktop／mobile 2／2；非全量 E2E 回歸 |
 | Backend 最後完整回歸 | 2026-09-21 02:51:02 +08:00 | Unit 61／61、Integration 101／101；Failed 0、Skipped 0 |
 | Frontend 最後完整回歸 | 2026-09-21 02:51:02 +08:00 | Vitest 79／79，type-check、ESLint、Prettier、production build 全部通過 |
 | E2E 最後完整回歸 | 2026-09-21 02:51:02 +08:00 | Playwright desktop／mobile 26／26；Failed 0、Skipped 0 |
@@ -1210,6 +1214,7 @@
 | FLOW-MEMBER | MEMBER 系列 001–009 | ✓ | ✓ | ✓ | ✅ 已實測通過 | Backend／Frontend 2026-09-16 20:47:27 |
 | FLOW-USER | USER 系列 001–010 | ✓ | ✓ | ✓ | ✅ 已實測通過 | Backend／Frontend／E2E 2026-09-21 02:51:02 |
 | PROFILE | TC-F-USER-008～009 | ✓ | ✓ | ✓ | ✅ 已實測通過 | Backend／Frontend／E2E 2026-09-21 02:51:02 |
+| AVATAR | TC-F/E/ERR/ST-AVATAR-001～008 | ✓ | ✓ | ✓ | 🟡 實作與驗證中 | 見 `AvatarUpload-TestCases.md`；不可引用舊版全量結果 |
 | PREF | PREF 系列 001–002 | ✓ | ✓ | ✓ | ✅ 已實測通過 | Frontend／E2E 2026-09-21 02:51:02 |
 | API／DB | SQL 系列 001–008、API 系列 001–005 | ✓ | ✓ | ✓ | ✅ 已實測通過 | 實際 SQL Server 2026-09-16 20:47:27 |
 | UI／UIMock | UI 系列 001–008 | ✓ | ✓ | ✓ | ✅ 已實測通過 | 全量 E2E 2026-09-21；實際 UI 擷取 2026-09-24 |
